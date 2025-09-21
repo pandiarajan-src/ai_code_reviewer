@@ -1,0 +1,252 @@
+#!/bin/bash
+
+# lint.sh - Comprehensive linting script for AI Code Reviewer
+# Uses ruff, black, and mypy to lint both app and test files
+
+set -e  # Exit on any error
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+PYTHON_FILES="*.py tests/*.py"
+EXCLUDE_DIRS="__pycache__ .pytest_cache htmlcov .git"
+
+echo -e "${BLUE}🔧 AI Code Reviewer - Comprehensive Linting${NC}"
+echo "=================================================="
+
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function to install missing tools
+install_linting_tools() {
+    echo -e "${YELLOW}📦 Installing/updating linting tools...${NC}"
+    
+    if ! command_exists ruff; then
+        echo "Installing ruff..."
+        pip install ruff
+    fi
+    
+    if ! command_exists black; then
+        echo "Installing black..."
+        pip install black
+    fi
+    
+    if ! command_exists mypy; then
+        echo "Installing mypy..."
+        pip install mypy
+    fi
+    
+    echo -e "${GREEN}✅ All linting tools are available${NC}"
+}
+
+# Function to run ruff linting and fixing
+run_ruff() {
+    echo -e "\n${BLUE}🚀 Running Ruff (linting and fixing)...${NC}"
+    echo "------------------------------------------"
+    
+    # Ruff check with auto-fix
+    echo "Ruff: Auto-fixing issues..."
+    if ruff check . --fix --show-fixes; then
+        echo -e "${GREEN}✅ Ruff auto-fix completed${NC}"
+    else
+        echo -e "${RED}❌ Ruff found issues that couldn't be auto-fixed${NC}"
+        echo "Running ruff check again to show remaining issues..."
+        ruff check .
+        return 1
+    fi
+    
+    # Ruff format (replaces need for isort in many cases)
+    echo -e "\nRuff: Formatting imports..."
+    if ruff format .; then
+        echo -e "${GREEN}✅ Ruff formatting completed${NC}"
+    else
+        echo -e "${RED}❌ Ruff formatting failed${NC}"
+        return 1
+    fi
+}
+
+# Function to run black formatting
+run_black() {
+    echo -e "\n${BLUE}🖤 Running Black (code formatting)...${NC}"
+    echo "------------------------------------------"
+    
+    # Check what black would change
+    if black --check --diff . 2>/dev/null; then
+        echo -e "${GREEN}✅ Code is already properly formatted${NC}"
+    else
+        echo "Black: Formatting code..."
+        if black .; then
+            echo -e "${GREEN}✅ Black formatting completed${NC}"
+        else
+            echo -e "${RED}❌ Black formatting failed${NC}"
+            return 1
+        fi
+    fi
+}
+
+# Function to run mypy type checking
+run_mypy() {
+    echo -e "\n${BLUE}🔍 Running MyPy (type checking)...${NC}"
+    echo "------------------------------------------"
+    
+    # Create mypy config if it doesn't exist
+    if [ ! -f "mypy.ini" ] && [ ! -f "pyproject.toml" ]; then
+        echo "Creating basic mypy.ini configuration..."
+        cat > mypy.ini << EOF
+[mypy]
+python_version = 3.11
+warn_return_any = True
+warn_unused_configs = True
+disallow_untyped_defs = False
+disallow_incomplete_defs = False
+check_untyped_defs = True
+disallow_untyped_decorators = False
+no_implicit_optional = True
+warn_redundant_casts = True
+warn_unused_ignores = True
+warn_no_return = True
+warn_unreachable = True
+strict_equality = True
+
+# Third-party libraries without stubs
+[mypy-httpx.*]
+ignore_missing_imports = True
+
+[mypy-uvicorn.*]
+ignore_missing_imports = True
+
+[mypy-pytest.*]
+ignore_missing_imports = True
+
+[mypy-fastapi.*]
+ignore_missing_imports = True
+EOF
+    fi
+    
+    # Run mypy on main files and tests
+    echo "MyPy: Checking main application files..."
+    if mypy *.py --ignore-missing-imports; then
+        echo -e "${GREEN}✅ Main files type check passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Main files have type issues${NC}"
+    fi
+    
+    echo -e "\nMyPy: Checking test files..."
+    if mypy tests/ --ignore-missing-imports; then
+        echo -e "${GREEN}✅ Test files type check passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Test files have type issues${NC}"
+    fi
+}
+
+# Function to show summary
+show_summary() {
+    echo -e "\n${BLUE}📊 Linting Summary${NC}"
+    echo "=================="
+    
+    # Check final state
+    echo "Final checks:"
+    
+    # Quick ruff check
+    if ruff check . --quiet; then
+        echo -e "${GREEN}✅ Ruff: No issues${NC}"
+    else
+        echo -e "${RED}❌ Ruff: Issues found${NC}"
+    fi
+    
+    # Quick black check
+    if black --check . --quiet; then
+        echo -e "${GREEN}✅ Black: Code properly formatted${NC}"
+    else
+        echo -e "${RED}❌ Black: Formatting issues${NC}"
+    fi
+    
+    echo -e "\n${GREEN}🎉 Linting process completed!${NC}"
+    echo "Check the output above for any remaining issues."
+}
+
+# Main execution
+main() {
+    # Parse command line arguments
+    FIX_MODE=true
+    CHECK_ONLY=false
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --check-only)
+                CHECK_ONLY=true
+                FIX_MODE=false
+                shift
+                ;;
+            --no-fix)
+                FIX_MODE=false
+                shift
+                ;;
+            -h|--help)
+                echo "Usage: $0 [OPTIONS]"
+                echo ""
+                echo "Options:"
+                echo "  --check-only    Only check for issues, don't fix them"
+                echo "  --no-fix        Run linters without auto-fix"
+                echo "  -h, --help      Show this help message"
+                echo ""
+                echo "Default behavior: Run all linters with auto-fix enabled"
+                exit 0
+                ;;
+            *)
+                echo "Unknown option: $1"
+                echo "Use -h or --help for usage information"
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Install tools if needed
+    install_linting_tools
+    
+    # Run linting tools
+    if $CHECK_ONLY; then
+        echo -e "\n${YELLOW}🔍 Running in CHECK-ONLY mode${NC}"
+        
+        # Check-only mode
+        echo -e "\n${BLUE}Checking with Ruff...${NC}"
+        ruff check .
+        
+        echo -e "\n${BLUE}Checking with Black...${NC}"
+        black --check --diff .
+        
+        run_mypy
+        
+    else
+        # Normal mode with fixes
+        if $FIX_MODE; then
+            echo -e "\n${YELLOW}🔧 Running with AUTO-FIX enabled${NC}"
+        else
+            echo -e "\n${YELLOW}🔍 Running WITHOUT auto-fix${NC}"
+        fi
+        
+        if $FIX_MODE; then
+            run_ruff
+            run_black
+        else
+            echo -e "\n${BLUE}🚀 Running Ruff (check only)...${NC}"
+            ruff check .
+            
+            echo -e "\n${BLUE}🖤 Running Black (check only)...${NC}"
+            black --check --diff .
+        fi
+        
+        run_mypy
+        show_summary
+    fi
+}
+
+# Run main function with all arguments
+main "$@"

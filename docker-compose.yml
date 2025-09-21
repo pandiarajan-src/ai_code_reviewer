@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  ai-code-reviewer:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Bitbucket Configuration
+      - BITBUCKET_URL=${BITBUCKET_URL:-https://your-bitbucket-server.com}
+      - BITBUCKET_TOKEN=${BITBUCKET_TOKEN}
+      
+      # LLM Configuration
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-https://api.openai.com/v1/chat/completions}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+      
+      # Ollama Configuration (if using local LLM)
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      
+      # Security
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Include Ollama service for local LLM
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    profiles:
+      - local-llm
+
+volumes:
+  ollama_data:
+
