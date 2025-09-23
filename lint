@@ -101,7 +101,7 @@ run_mypy() {
         echo "Creating basic mypy.ini configuration..."
         cat > mypy.ini << EOF
 [mypy]
-python_version = 3.12
+python_version = 3.11
 warn_return_any = True
 warn_unused_configs = True
 disallow_untyped_defs = False

@@ -1,7 +1,9 @@
-import pytest
 import os
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+
+import pytest
 from fastapi.testclient import TestClient
+
 
 # Set test environment variables
 os.environ["BITBUCKET_URL"] = "https://test-bitbucket.com"
@@ -11,9 +13,10 @@ os.environ["LLM_API_KEY"] = "test_api_key"
 os.environ["LLM_MODEL"] = "gpt-4o"
 os.environ["WEBHOOK_SECRET"] = "test_secret"
 
-from main import app
 from bitbucket_client import BitbucketClient
 from llm_client import LLMClient
+from main import app
+
 
 @pytest.fixture
 def client():
@@ -104,10 +107,10 @@ index 1234567..abcdefg 100644
  def hello_world():
 -    print("Hello World")
 +    print("Hello, World!")
-+    
++
 +def new_function():
 +    return "This is a new function"
- 
+
  if __name__ == "__main__":
      hello_world()
 +    print(new_function())

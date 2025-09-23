@@ -27,7 +27,7 @@ This comprehensive guide covers all deployment scenarios for the AI Code Reviewe
 ### Software Requirements
 
 - **Docker**: Version 20.10+ and Docker Compose v2.0+
-- **Python**: Version 3.11+ (for local development)
+- **Python**: Version 3.12+ (for local development)
 - **Git**: For cloning the repository
 
 ### Access Requirements
@@ -49,7 +49,7 @@ cd ai_code_reviewer
 
 ```bash
 # Create virtual environment
-python3.11 -m venv venv
+python3.12 -m venv venv
 
 # Activate virtual environment
 source venv/bin/activate  # Linux/macOS

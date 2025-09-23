@@ -31,7 +31,7 @@ The agent follows a webhook-driven architecture:
 ### Prerequisites
 
 - Docker and Docker Compose (recommended)
-- Python 3.11+ (for local development)
+- Python 3.12+ (for local development)
 - Bitbucket Enterprise Server with admin access
 - OpenAI API key OR local Ollama installation
 

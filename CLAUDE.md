@@ -91,7 +91,7 @@ Required environment variables are defined in config.py with validation. Key var
 - Coverage reporting with HTML output in `htmlcov/`
 
 ## Code Standards
-- Python 3.11+ with type hints
+- Python 3.12+ with type hints
 - Formatting: Black (120 char line length)
 - Linting: Ruff with comprehensive rules (configured in pyproject.toml)
 - Type checking: MyPy with gradual typing

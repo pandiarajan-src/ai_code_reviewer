@@ -1,5 +1,6 @@
 import os
 
+
 class Config:
     BITBUCKET_URL = os.getenv("BITBUCKET_URL", "https://your-bitbucket-server.com")
     BITBUCKET_TOKEN = os.getenv("BITBUCKET_TOKEN")  # This should be set as an environment variable
@@ -36,23 +37,23 @@ Please provide your review:"""
     # Server configuration
     HOST = os.getenv("HOST", "0.0.0.0")
     PORT = int(os.getenv("PORT", "8000"))
-    
+
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    
+
     @classmethod
     def validate_config(cls):
         """Validate that required configuration is present"""
         errors = []
-        
+
         if not cls.BITBUCKET_TOKEN:
             errors.append("BITBUCKET_TOKEN is required")
-            
+
         if cls.LLM_PROVIDER == "openai" and not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY is required when using OpenAI provider")
-            
+
         if errors:
             raise ValueError(f"Configuration errors: {', '.join(errors)}")
-        
+
         return True
 
