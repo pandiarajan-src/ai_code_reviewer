@@ -21,7 +21,12 @@ services:
       
       # Security
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-      
+
+      # Email Configuration
+      - LOGIC_APP_EMAIL_URL=${LOGIC_APP_EMAIL_URL}
+      - LOGIC_APP_FROM_EMAIL=${LOGIC_APP_FROM_EMAIL:-pandiarajans@test.com}
+      - EMAIL_OPTOUT=${EMAIL_OPTOUT:-true}
+
       # Server Configuration
       - HOST=0.0.0.0
       - PORT=${PORT:-8000}
