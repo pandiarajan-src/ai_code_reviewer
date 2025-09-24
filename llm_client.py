@@ -8,6 +8,7 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+
 class LLMClient:
     """Client for interacting with various LLM providers"""
 
@@ -33,23 +34,12 @@ class LLMClient:
     async def _test_openai_connection(self) -> dict[str, Any]:
         """Test OpenAI API connection"""
         try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
-            payload = {
-                "model": self.model,
-                "messages": [{"role": "user", "content": "Hello"}],
-                "max_tokens": 5
-            }
+            payload = {"model": self.model, "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 5}
 
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(
-                    self.endpoint,
-                    headers=headers,
-                    json=payload
-                )
+                response = await client.post(self.endpoint, headers=headers, json=payload)
 
                 if response.status_code == 200:
                     return {"status": "connected", "provider": "openai", "model": self.model}
@@ -75,13 +65,13 @@ class LLMClient:
                             "status": "connected",
                             "provider": "ollama",
                             "model": self.model,
-                            "available_models": model_names
+                            "available_models": model_names,
                         }
                     else:
                         return {
                             "status": "model_not_found",
                             "error": f"Model {self.model} not found",
-                            "available_models": model_names
+                            "available_models": model_names,
                         }
                 else:
                     return {"status": "failed", "error": f"HTTP {response.status_code}: {response.text}"}
@@ -99,8 +89,10 @@ class LLMClient:
             max_chars = 50000  # Adjust based on your model's context window
             if len(prompt) > max_chars:
                 logger.warning(f"Diff too long ({len(prompt)} chars), truncating to {max_chars}")
-                truncated_diff = diff_content[:max_chars - len(Config.REVIEW_PROMPT_TEMPLATE) + len("{diff_content}")]
-                prompt = Config.REVIEW_PROMPT_TEMPLATE.format(diff_content=truncated_diff + "\n\n[... diff truncated ...]")
+                truncated_diff = diff_content[: max_chars - len(Config.REVIEW_PROMPT_TEMPLATE) + len("{diff_content}")]
+                prompt = Config.REVIEW_PROMPT_TEMPLATE.format(
+                    diff_content=truncated_diff + "\n\n[... diff truncated ...]"
+                )
 
             if self.provider == "openai":
                 return await self._get_openai_review(prompt)
@@ -117,39 +109,29 @@ class LLMClient:
     async def _get_openai_review(self, prompt: str) -> str | None:
         """Get code review from OpenAI API"""
         try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
 
             payload = {
                 "model": self.model,
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are an expert code reviewer. Provide constructive, specific feedback on code changes."
+                        "content": "You are an expert code reviewer. Provide constructive, specific feedback on code changes.",
                     },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "user", "content": prompt},
                 ],
                 "max_tokens": 2000,
-                "temperature": 0.1
+                "temperature": 0.1,
             }
 
             async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(
-                    self.endpoint,
-                    headers=headers,
-                    json=payload
-                )
+                response = await client.post(self.endpoint, headers=headers, json=payload)
 
                 if response.status_code == 200:
                     result = response.json()
                     review = result["choices"][0]["message"]["content"].strip()
                     logger.info(f"Received OpenAI review ({len(review)} characters)")
-                    return review
+                    return str(review)
                 else:
                     logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
                     return None
@@ -165,24 +147,17 @@ class LLMClient:
                 "model": self.model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {
-                    "temperature": 0.1,
-                    "top_p": 0.9,
-                    "num_predict": 2000
-                }
+                "options": {"temperature": 0.1, "top_p": 0.9, "num_predict": 2000},
             }
 
             async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    f"{self.ollama_host}/api/generate",
-                    json=payload
-                )
+                response = await client.post(f"{self.ollama_host}/api/generate", json=payload)
 
                 if response.status_code == 200:
                     result = response.json()
                     review = result.get("response", "").strip()
                     logger.info(f"Received Ollama review ({len(review)} characters)")
-                    return review
+                    return str(review)
                 else:
                     logger.error(f"Ollama API error: {response.status_code} - {response.text}")
                     return None
@@ -193,12 +168,12 @@ class LLMClient:
 
     def _clean_diff_for_review(self, diff_content: str) -> str:
         """Clean and prepare diff content for review"""
-        lines = diff_content.split('\n')
+        lines = diff_content.split("\n")
         cleaned_lines = []
 
         for line in lines:
             # Skip binary file indicators
-            if line.startswith('Binary files') or 'differ' in line:
+            if line.startswith("Binary files") or "differ" in line:
                 continue
 
             # Skip very long lines that might be minified code
@@ -207,7 +182,7 @@ class LLMClient:
             else:
                 cleaned_lines.append(line)
 
-        return '\n'.join(cleaned_lines)
+        return "\n".join(cleaned_lines)
 
     async def get_summary_review(self, diff_content: str, file_count: int) -> str | None:
         """Get a summary review for large changesets"""
@@ -236,4 +211,3 @@ Provide a concise summary review:"""
         except Exception as e:
             logger.error(f"Error getting summary review: {str(e)}")
             return None
-

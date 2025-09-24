@@ -15,21 +15,16 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+
 def run_command(command, description):
     """Run a command and return success status"""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Running: {description}")
     print(f"Command: {command}")
-    print('='*60)
+    print("=" * 60)
 
     try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            cwd=project_root
-        )
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=project_root)
 
         if result.stdout:
             print("STDOUT:")
@@ -50,6 +45,7 @@ def run_command(command, description):
         print(f"❌ {description} - ERROR: {str(e)}")
         return False
 
+
 def setup_test_environment():
     """Setup test environment"""
     print("Setting up test environment...")
@@ -64,7 +60,7 @@ def setup_test_environment():
         "WEBHOOK_SECRET": "test_secret",
         "HOST": "0.0.0.0",
         "PORT": "8000",
-        "LOG_LEVEL": "INFO"
+        "LOG_LEVEL": "INFO",
     }
 
     for key, value in test_env.items():
@@ -72,19 +68,22 @@ def setup_test_environment():
 
     print("✅ Test environment configured")
 
+
 def install_dependencies():
     """Install test dependencies"""
     commands = [
         ("pip install -r requirements.txt", "Installing main dependencies"),
-        ("pip install -r test_requirements.txt", "Installing test dependencies")
+        ("pip install -r test_requirements.txt", "Installing test dependencies"),
     ]
 
     return all(run_command(command, description) for command, description in commands)
+
 
 def run_unit_tests():
     """Run unit tests with coverage"""
     command = "python -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=html"
     return run_command(command, "Unit Tests with Coverage")
+
 
 def run_linting():
     """Run comprehensive code linting with ruff, black, and mypy"""
@@ -99,16 +98,18 @@ def run_linting():
         command = "flake8 --max-line-length=120 --ignore=E501,W503 *.py tests/"
         return run_command(command, "Basic Code Linting (flake8)")
 
+
 def test_docker_build():
     """Test Docker build"""
     command = "docker build -t ai-code-reviewer-test ."
     return run_command(command, "Docker Build Test")
 
+
 def test_configuration_validation():
     """Test configuration validation"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Configuration Validation")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from config import Config
@@ -140,11 +141,12 @@ def test_configuration_validation():
         print(f"❌ Configuration validation - ERROR: {str(e)}")
         return False
 
+
 async def test_api_endpoints():
     """Test API endpoints"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing API Endpoints")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from fastapi.testclient import TestClient
@@ -174,7 +176,7 @@ async def test_api_endpoints():
             "eventKey": "pr:opened",
             "date": "2024-01-01T00:00:00Z",
             "repository": {"slug": "test", "project": {"key": "TEST"}},
-            "pullRequest": {"id": 123}
+            "pullRequest": {"id": 123},
         }
 
         response = client.post("/webhook/code-review", json=test_payload)
@@ -190,20 +192,23 @@ async def test_api_endpoints():
         print(f"❌ API endpoints test - ERROR: {str(e)}")
         return False
 
+
 def test_client_modules():
     """Test client modules"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Testing Client Modules")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Test Bitbucket client import
         from bitbucket_client import BitbucketClient
+
         BitbucketClient()
         print("✅ Bitbucket client import - PASSED")
 
         # Test LLM client import
         from llm_client import LLMClient
+
         LLMClient()
         print("✅ LLM client import - PASSED")
 
@@ -213,11 +218,12 @@ def test_client_modules():
         print(f"❌ Client modules test - ERROR: {str(e)}")
         return False
 
+
 def generate_test_report(results):
     """Generate test report"""
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("TEST REPORT SUMMARY")
-    print("="*80)
+    print("=" * 80)
 
     total_tests = len(results)
     passed_tests = sum(1 for result in results.values() if result)
@@ -226,7 +232,7 @@ def generate_test_report(results):
     print(f"Total Tests: {total_tests}")
     print(f"Passed: {passed_tests}")
     print(f"Failed: {failed_tests}")
-    print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+    print(f"Success Rate: {(passed_tests / total_tests) * 100:.1f}%")
 
     print("\nDetailed Results:")
     for test_name, result in results.items():
@@ -239,6 +245,7 @@ def generate_test_report(results):
     else:
         print(f"\n⚠️  {failed_tests} test(s) failed. Please fix before deployment.")
         return False
+
 
 def main():
     """Main test runner"""
@@ -278,6 +285,6 @@ def main():
     # Exit with appropriate code
     sys.exit(0 if success else 1)
 
+
 if __name__ == "__main__":
     main()
-

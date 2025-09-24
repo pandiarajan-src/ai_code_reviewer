@@ -18,12 +18,13 @@ class TestLLMClient:
         """Test successful OpenAI connection"""
         mock_response = AsyncMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Hello"}}]
-        }
+        mock_response.json.return_value = {"choices": [{"message": {"content": "Hello"}}]}
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await client._test_openai_connection()
 
@@ -37,8 +38,11 @@ class TestLLMClient:
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await client._test_openai_connection()
 
@@ -50,15 +54,19 @@ class TestLLMClient:
         """Test successful Ollama connection"""
         mock_response = AsyncMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "models": [
-                {"name": "llama3"},
-                {"name": "qwen-coder"}
-            ]
-        }
+        mock_response.json.return_value = {"models": [{"name": "llama3"}, {"name": "qwen-coder"}]}
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_class:
+            # Create a mock context manager that returns a mock client
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get.return_value = mock_response
+
+            # Set up the context manager to return our mock client instance
+            mock_context_manager = AsyncMock()
+            mock_context_manager.__aenter__.return_value = mock_client_instance
+            mock_context_manager.__aexit__.return_value = None
+
+            mock_client_class.return_value = mock_context_manager
 
             # Test with model that exists
             client.model = "llama3"
@@ -73,12 +81,13 @@ class TestLLMClient:
         """Test Ollama connection with model not found"""
         mock_response = AsyncMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "models": [{"name": "llama3"}]
-        }
+        mock_response.json.return_value = {"models": [{"name": "llama3"}]}
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             # Test with model that doesn't exist
             client.model = "nonexistent-model"
@@ -93,15 +102,14 @@ class TestLLMClient:
         mock_response = AsyncMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "choices": [{
-                "message": {
-                    "content": "The code looks good. No issues found."
-                }
-            }]
+            "choices": [{"message": {"content": "The code looks good. No issues found."}}]
         }
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             prompt = f"Review this code: {sample_diff}"
             result = await client._get_openai_review(prompt)
@@ -115,8 +123,11 @@ class TestLLMClient:
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             prompt = f"Review this code: {sample_diff}"
             result = await client._get_openai_review(prompt)
@@ -128,12 +139,13 @@ class TestLLMClient:
         """Test successful Ollama code review"""
         mock_response = AsyncMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "response": "The code looks good. No issues found."
-        }
+        mock_response.json.return_value = {"response": "The code looks good. No issues found."}
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post.return_value = mock_response
+        with patch("httpx.AsyncClient") as mock_client_cls:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.post = AsyncMock(return_value=mock_response)
+            mock_client_cls.return_value.__aenter__.return_value = mock_client_instance
+            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=None)
 
             prompt = f"Review this code: {sample_diff}"
             result = await client._get_ollama_review(prompt)
@@ -145,7 +157,7 @@ class TestLLMClient:
         """Test code review with OpenAI provider"""
         client.provider = "openai"
 
-        with patch.object(client, '_get_openai_review', return_value="Mock review"):
+        with patch.object(client, "_get_openai_review", new_callable=AsyncMock, return_value="Mock review"):
             result = await client.get_code_review(sample_diff)
 
             assert result == "Mock review"
@@ -155,7 +167,7 @@ class TestLLMClient:
         """Test code review with Ollama provider"""
         client.provider = "local_ollama"
 
-        with patch.object(client, '_get_ollama_review', return_value="Mock review"):
+        with patch.object(client, "_get_ollama_review", new_callable=AsyncMock, return_value="Mock review"):
             result = await client.get_code_review(sample_diff)
 
             assert result == "Mock review"
@@ -176,7 +188,9 @@ class TestLLMClient:
         long_diff = "a" * 60000
         client.provider = "openai"
 
-        with patch.object(client, '_get_openai_review', return_value="Mock review") as mock_review:
+        with patch.object(
+            client, "_get_openai_review", new_callable=AsyncMock, return_value="Mock review"
+        ) as mock_review:
             await client.get_code_review(long_diff)
 
             # Check that the prompt was truncated
@@ -189,17 +203,21 @@ class TestLLMClient:
         """Test summary review for large changesets"""
         client.provider = "openai"
 
-        with patch.object(client, '_get_openai_review', return_value="Summary review"):
+        with patch.object(client, "_get_openai_review", new_callable=AsyncMock, return_value="Summary review"):
             result = await client.get_summary_review(sample_diff, 10)
 
             assert result == "Summary review"
 
     def test_clean_diff_for_review(self, client):
         """Test diff cleaning functionality"""
-        dirty_diff = """Binary files a/image.png and b/image.png differ
+        dirty_diff = (
+            """Binary files a/image.png and b/image.png differ
 This is a normal line
-""" + "a" * 600 + """
+"""
+            + "a" * 600
+            + """
 Another normal line"""
+        )
 
         cleaned = client._clean_diff_for_review(dirty_diff)
 
@@ -207,4 +225,3 @@ Another normal line"""
         assert "differ" not in cleaned
         assert "[line truncated]" in cleaned
         assert "Another normal line" in cleaned
-

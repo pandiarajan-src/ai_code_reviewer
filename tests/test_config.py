@@ -24,6 +24,7 @@ class TestConfig:
             import importlib
 
             import config
+
             importlib.reload(config)
 
             assert config.Config.PORT == 9000
@@ -31,14 +32,13 @@ class TestConfig:
 
     def test_validate_config_success(self):
         """Test successful configuration validation"""
-        with patch.dict(os.environ, {
-            "BITBUCKET_TOKEN": "test_token",
-            "LLM_API_KEY": "test_key",
-            "LLM_PROVIDER": "openai"
-        }):
+        with patch.dict(
+            os.environ, {"BITBUCKET_TOKEN": "test_token", "LLM_API_KEY": "test_key", "LLM_PROVIDER": "openai"}
+        ):
             import importlib
 
             import config
+
             importlib.reload(config)
 
             assert config.Config.validate_config() is True
@@ -49,6 +49,7 @@ class TestConfig:
             import importlib
 
             import config
+
             importlib.reload(config)
 
             with pytest.raises(ValueError, match="BITBUCKET_TOKEN is required"):
@@ -56,14 +57,13 @@ class TestConfig:
 
     def test_validate_config_missing_openai_key(self):
         """Test validation failure for missing OpenAI key"""
-        with patch.dict(os.environ, {
-            "BITBUCKET_TOKEN": "test_token",
-            "LLM_PROVIDER": "openai",
-            "LLM_API_KEY": ""
-        }, clear=True):
+        with patch.dict(
+            os.environ, {"BITBUCKET_TOKEN": "test_token", "LLM_PROVIDER": "openai", "LLM_API_KEY": ""}, clear=True
+        ):
             import importlib
 
             import config
+
             importlib.reload(config)
 
             with pytest.raises(ValueError, match="LLM_API_KEY is required"):
@@ -71,13 +71,11 @@ class TestConfig:
 
     def test_validate_config_local_ollama(self):
         """Test validation success for local Ollama provider"""
-        with patch.dict(os.environ, {
-            "BITBUCKET_TOKEN": "test_token",
-            "LLM_PROVIDER": "local_ollama"
-        }, clear=True):
+        with patch.dict(os.environ, {"BITBUCKET_TOKEN": "test_token", "LLM_PROVIDER": "local_ollama"}, clear=True):
             import importlib
 
             import config
+
             importlib.reload(config)
 
             assert config.Config.validate_config() is True
@@ -90,4 +88,3 @@ class TestConfig:
         assert "test diff content" in formatted_prompt
         assert "expert code reviewer" in formatted_prompt.lower()
         assert "bug detection" in formatted_prompt.lower()
-

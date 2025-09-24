@@ -149,33 +149,7 @@ clean: ## Clean temporary files and caches
 	@echo "✅ Cleanup completed!"
 
 clean-all: clean docker-clean ## Clean everything including Docker
-
-# Environment setup
-env-example: ## Create example environment file
-	@echo "📝 Creating .env.example..."
-	@cat > .env.example << 'EOF'
-# Bitbucket Configuration
-BITBUCKET_URL=https://your-bitbucket-server.com
-BITBUCKET_TOKEN=your_bitbucket_token_here
-
-# LLM Configuration
-LLM_PROVIDER=openai
-LLM_API_KEY=your_openai_api_key_here
-LLM_ENDPOINT=https://api.openai.com/v1/chat/completions
-LLM_MODEL=gpt-4o
-
-# Ollama Configuration (if using local LLM)
-OLLAMA_HOST=http://localhost:11434
-
-# Security
-WEBHOOK_SECRET=your_webhook_secret_here
-
-# Server Configuration
-HOST=0.0.0.0
-PORT=8000
-LOG_LEVEL=INFO
-EOF
-	@echo "✅ Created .env.example - copy and customize for your environment"
+	@echo "✅ Full cleanup completed!"
 
 # Pre-commit setup
 pre-commit-install: ## Install pre-commit hooks

@@ -8,16 +8,17 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+
 class BitbucketClient:
     """Client for interacting with Bitbucket Enterprise Server API"""
 
     def __init__(self):
-        self.base_url = Config.BITBUCKET_URL.rstrip('/')
+        self.base_url = Config.BITBUCKET_URL.rstrip("/")
         self.token = Config.BITBUCKET_TOKEN
         self.headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Accept": "application/json",
         }
 
     async def _make_request(self, method: str, endpoint: str, **kwargs) -> dict[Any, Any] | None:
@@ -26,12 +27,7 @@ class BitbucketClient:
 
         try:
             async with httpx.AsyncClient(verify=False, timeout=30.0) as client:
-                response = await client.request(
-                    method=method,
-                    url=url,
-                    headers=self.headers,
-                    **kwargs
-                )
+                response = await client.request(method=method, url=url, headers=self.headers, **kwargs)
 
                 if response.status_code == 200:
                     return response.json() if response.content else {}
@@ -51,12 +47,7 @@ class BitbucketClient:
 
         try:
             async with httpx.AsyncClient(verify=False, timeout=30.0) as client:
-                response = await client.request(
-                    method=method,
-                    url=url,
-                    headers=self.headers,
-                    **kwargs
-                )
+                response = await client.request(method=method, url=url, headers=self.headers, **kwargs)
 
                 if response.status_code == 200:
                     return response.text
@@ -76,7 +67,7 @@ class BitbucketClient:
                 return {
                     "status": "connected",
                     "version": response.get("version", "unknown"),
-                    "display_name": response.get("displayName", "Bitbucket Server")
+                    "display_name": response.get("displayName", "Bitbucket Server"),
                 }
             else:
                 return {"status": "failed", "error": "Unable to connect to Bitbucket server"}
@@ -89,10 +80,7 @@ class BitbucketClient:
 
         try:
             # Get diff with context
-            params = {
-                "contextLines": 3,
-                "whitespace": "ignore-all"
-            }
+            params = {"contextLines": 3, "whitespace": "ignore-all"}
 
             diff_text = await self._make_request_text("GET", endpoint, params=params)
 
@@ -113,10 +101,7 @@ class BitbucketClient:
 
         try:
             # Get diff with context
-            params = {
-                "contextLines": 3,
-                "whitespace": "ignore-all"
-            }
+            params = {"contextLines": 3, "whitespace": "ignore-all"}
 
             diff_text = await self._make_request_text("GET", endpoint, params=params)
 
@@ -136,9 +121,7 @@ class BitbucketClient:
         endpoint = f"/projects/{project_key}/repos/{repo_slug}/pull-requests/{pr_id}/comments"
 
         try:
-            payload = {
-                "text": comment
-            }
+            payload = {"text": comment}
 
             response = await self._make_request("POST", endpoint, json=payload)
 
@@ -158,9 +141,7 @@ class BitbucketClient:
         endpoint = f"/projects/{project_key}/repos/{repo_slug}/commits/{commit_id}/comments"
 
         try:
-            payload = {
-                "text": comment
-            }
+            payload = {"text": comment}
 
             response = await self._make_request("POST", endpoint, json=payload)
 
@@ -228,4 +209,3 @@ class BitbucketClient:
         except Exception as e:
             logger.error(f"Error getting repo info: {str(e)}")
             return None
-

@@ -23,6 +23,7 @@ def client():
     """FastAPI test client"""
     return TestClient(app)
 
+
 @pytest.fixture
 def mock_bitbucket_client():
     """Mock Bitbucket client"""
@@ -34,6 +35,7 @@ def mock_bitbucket_client():
     client.post_commit_comment.return_value = True
     return client
 
+
 @pytest.fixture
 def mock_llm_client():
     """Mock LLM client"""
@@ -42,28 +44,18 @@ def mock_llm_client():
     client.get_code_review.return_value = "Mock AI review: Code looks good!"
     return client
 
+
 @pytest.fixture
 def sample_pr_webhook():
     """Sample pull request webhook payload"""
     return {
         "eventKey": "pr:opened",
         "date": "2024-01-01T00:00:00Z",
-        "actor": {
-            "name": "testuser",
-            "emailAddress": "test@example.com"
-        },
-        "repository": {
-            "slug": "test-repo",
-            "project": {
-                "key": "TEST"
-            }
-        },
-        "pullRequest": {
-            "id": 123,
-            "title": "Test PR",
-            "description": "Test pull request"
-        }
+        "actor": {"name": "testuser", "emailAddress": "test@example.com"},
+        "repository": {"slug": "test-repo", "project": {"key": "TEST"}},
+        "pullRequest": {"id": 123, "title": "Test PR", "description": "Test pull request"},
     }
+
 
 @pytest.fixture
 def sample_commit_webhook():
@@ -71,30 +63,19 @@ def sample_commit_webhook():
     return {
         "eventKey": "repo:refs_changed",
         "date": "2024-01-01T00:00:00Z",
-        "actor": {
-            "name": "testuser",
-            "emailAddress": "test@example.com"
-        },
-        "repository": {
-            "slug": "test-repo",
-            "project": {
-                "key": "TEST"
-            }
-        },
+        "actor": {"name": "testuser", "emailAddress": "test@example.com"},
+        "repository": {"slug": "test-repo", "project": {"key": "TEST"}},
         "changes": [
             {
-                "ref": {
-                    "id": "refs/heads/main",
-                    "displayId": "main",
-                    "type": "BRANCH"
-                },
+                "ref": {"id": "refs/heads/main", "displayId": "main", "type": "BRANCH"},
                 "refId": "refs/heads/main",
                 "fromHash": "abc123",
                 "toHash": "def456",
-                "type": "UPDATE"
+                "type": "UPDATE",
             }
-        ]
+        ],
     }
+
 
 @pytest.fixture
 def sample_diff():
@@ -115,4 +96,3 @@ index 1234567..abcdefg 100644
      hello_world()
 +    print(new_function())
 """
-

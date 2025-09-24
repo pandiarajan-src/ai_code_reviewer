@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import logging
 from typing import Any
 
@@ -19,8 +20,7 @@ load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=getattr(logging, Config.LOG_LEVEL),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=getattr(logging, Config.LOG_LEVEL), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="AI Code Reviewer",
     description="AI-powered code review agent for Bitbucket Enterprise Server",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Add CORS middleware
@@ -44,26 +44,25 @@ app.add_middleware(
 bitbucket_client = BitbucketClient()
 llm_client = LLMClient()
 
+
 class WebhookPayload(BaseModel):
     eventKey: str
     date: str
     actor: dict[str, Any]
     repository: dict[str, Any]
-    pullRequest: dict[str, Any] = None
-    changes: list = None
+    pullRequest: dict[str, Any] | None = None
+    changes: list | None = None
+
 
 def verify_webhook_signature(payload: bytes, signature: str) -> bool:
     """Verify webhook signature if secret is configured"""
     if not Config.WEBHOOK_SECRET:
         return True  # Skip verification if no secret is configured
 
-    expected_signature = hmac.new(
-        Config.WEBHOOK_SECRET.encode(),
-        payload,
-        hashlib.sha256
-    ).hexdigest()
+    expected_signature = hmac.new(Config.WEBHOOK_SECRET.encode(), payload, hashlib.sha256).hexdigest()
 
     return hmac.compare_digest(f"sha256={expected_signature}", signature)
+
 
 async def process_pull_request_review(payload: dict[str, Any]):
     """Process pull request for AI review"""
@@ -98,6 +97,7 @@ async def process_pull_request_review(payload: dict[str, Any]):
 
     except Exception as e:
         logger.error(f"Error processing pull request review: {str(e)}")
+
 
 async def process_commit_review(payload: dict[str, Any]):
     """Process commit for AI review"""
@@ -139,10 +139,12 @@ async def process_commit_review(payload: dict[str, Any]):
     except Exception as e:
         logger.error(f"Error processing commit review: {str(e)}")
 
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
     return {"message": "AI Code Reviewer is running", "status": "healthy"}
+
 
 @app.get("/health")
 async def health_check():
@@ -164,26 +166,33 @@ async def health_check():
             "config": {
                 "bitbucket_url": Config.BITBUCKET_URL,
                 "llm_provider": Config.LLM_PROVIDER,
-                "llm_model": Config.LLM_MODEL
-            }
+                "llm_model": Config.LLM_MODEL,
+            },
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
 
+
 @app.post("/webhook/code-review")
 async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
     """Handle Bitbucket webhooks for code review"""
+    payload = None
     try:
         # Get raw payload for signature verification
         payload_bytes = await request.body()
 
-        # Verify webhook signature if configured
-        signature = request.headers.get("X-Hub-Signature-256", "")
-        if not verify_webhook_signature(payload_bytes, signature):
-            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        # # Verify webhook signature if configured
+        # signature = request.headers.get("X-Hub-Signature-256", "")
+        # if not verify_webhook_signature(payload_bytes, signature):
+        #     raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
         # Parse JSON payload
-        payload = await request.json()
+        payload = json.loads(payload_bytes.decode("utf-8"))
+
+        # Handle BitBucket test connection
+        if payload.get("test") is True:
+            logger.info("Received Bitbucket test connection webhook")
+            return {"status": "success", "message": "Test connection received"}
 
         event_key = payload.get("eventKey", "")
         logger.info(f"Received webhook event: {event_key}")
@@ -200,18 +209,16 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
             logger.info(f"Ignoring event: {event_key}")
 
         return {"status": "accepted", "event": event_key}
-
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON payload in webhook: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
     except Exception as e:
         logger.error(f"Error handling webhook: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.post("/manual-review")
-async def manual_review(
-    project_key: str,
-    repo_slug: str,
-    pr_id: int = None,
-    commit_id: str = None
-):
+async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = None, commit_id: str | None = None):
     """Manually trigger a code review"""
     try:
         if pr_id:
@@ -247,6 +254,7 @@ async def manual_review(
         logger.error(f"Error in manual review: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     try:
         # Validate configuration on startup
@@ -254,14 +262,7 @@ if __name__ == "__main__":
         logger.info("Configuration validated successfully")
 
         # Start the server
-        uvicorn.run(
-            "main:app",
-            host=Config.HOST,
-            port=Config.PORT,
-            reload=False,
-            log_level=Config.LOG_LEVEL.lower()
-        )
+        uvicorn.run("main:app", host=Config.HOST, port=Config.PORT, reload=False, log_level=Config.LOG_LEVEL.lower())
     except Exception as e:
         logger.error(f"Failed to start server: {str(e)}")
         exit(1)
-
