@@ -10,13 +10,14 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from bitbucket_client import BitbucketClient
-from config import Config
-from llm_client import LLMClient
 
-
-# Load environment variables
+# Load environment variables BEFORE importing config
 load_dotenv()
+
+from bitbucket_client import BitbucketClient  # noqa: E402
+from config import Config  # noqa: E402
+from llm_client import LLMClient  # noqa: E402
+
 
 # Configure logging
 logging.basicConfig(
