@@ -9,7 +9,7 @@ PIP := pip
 PYTEST := pytest
 COVERAGE_MIN := 80
 SERVER_HOST := 0.0.0.0
-SERVER_PORT := 8000
+SERVER_PORT := $(shell echo $${PORT:-8000})
 
 # Help target - default when running 'make'
 help: ## Show this help message
