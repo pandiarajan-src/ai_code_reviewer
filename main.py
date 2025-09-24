@@ -52,23 +52,23 @@ llm_client = LLMClient()
 def format_review_to_html(review_text: str) -> str:
     """Convert review text from markdown to HTML format for email"""
     # Convert markdown headers to HTML
-    html_text = re.sub(r'^### (.*?)$', r'<h3>\1</h3>', review_text, flags=re.MULTILINE)
-    html_text = re.sub(r'^#### (.*?)$', r'<h4>\1</h4>', html_text, flags=re.MULTILINE)
+    html_text = re.sub(r"^### (.*?)$", r"<h3>\1</h3>", review_text, flags=re.MULTILINE)
+    html_text = re.sub(r"^#### (.*?)$", r"<h4>\1</h4>", html_text, flags=re.MULTILINE)
 
     # Convert bold text
-    html_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html_text)
+    html_text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", html_text)
 
     # Convert code blocks
-    html_text = re.sub(r'```(\w*)\n(.*?)```', r'<pre><code class="\1">\2</code></pre>', html_text, flags=re.DOTALL)
+    html_text = re.sub(r"```(\w*)\n(.*?)```", r'<pre><code class="\1">\2</code></pre>', html_text, flags=re.DOTALL)
 
     # Convert inline code
-    html_text = re.sub(r'`([^`]+)`', r'<code>\1</code>', html_text)
+    html_text = re.sub(r"`([^`]+)`", r"<code>\1</code>", html_text)
 
     # Convert bullet points
-    html_text = re.sub(r'^   - (.*?)$', r'   <li>\1</li>', html_text, flags=re.MULTILINE)
+    html_text = re.sub(r"^   - (.*?)$", r"   <li>\1</li>", html_text, flags=re.MULTILINE)
 
     # Convert newlines to <br> for better formatting
-    html_text = html_text.replace('\n', '<br>\n')
+    html_text = html_text.replace("\n", "<br>\n")
 
     # Wrap in basic HTML structure
     return f"""
@@ -82,7 +82,14 @@ def format_review_to_html(review_text: str) -> str:
 """
 
 
-async def send_review_email(project_key: str, repo_slug: str, review: str, review_type: str = "AI Code Review", commit_id: str | None = None, pr_id: int | None = None) -> bool:
+async def send_review_email(
+    project_key: str,
+    repo_slug: str,
+    review: str,
+    review_type: str = "AI Code Review",
+    commit_id: str | None = None,
+    pr_id: int | None = None,
+) -> bool:
     """Send review email to author. Returns True if email was sent successfully, False otherwise."""
     try:
         author_email = None
@@ -98,7 +105,12 @@ async def send_review_email(project_key: str, repo_slug: str, review: str, revie
         elif pr_id:
             # Get PR info to extract author email
             pr_info = await bitbucket_client.get_pull_request_info(project_key, repo_slug, pr_id)
-            if pr_info and pr_info.get("author") and pr_info["author"].get("user") and pr_info["author"]["user"].get("emailAddress"):
+            if (
+                pr_info
+                and pr_info.get("author")
+                and pr_info["author"].get("user")
+                and pr_info["author"]["user"].get("emailAddress")
+            ):
                 author_email = pr_info["author"]["user"]["emailAddress"]
                 subject_id = f"PR #{pr_id}"
 
@@ -117,7 +129,7 @@ async def send_review_email(project_key: str, repo_slug: str, review: str, revie
             to=author_email,
             cc="",  # No CC for now
             subject=subject,
-            mailbody=html_body
+            mailbody=html_body,
         )
 
         logger.info(f"Sent {review_type.lower()} email for {subject_id} to {author_email}")
@@ -361,7 +373,9 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                     # )
 
                     # Send review email
-                    await send_review_email(project_key, repo_slug, review, "AI Code Review (Manual)", commit_id=commit_id)
+                    await send_review_email(
+                        project_key, repo_slug, review, "AI Code Review (Manual)", commit_id=commit_id
+                    )
 
                 return {"status": "completed", "review": review}
             else:

@@ -15,13 +15,17 @@ OUTPUTS:
     If the request is successful, it logs a success message;
     otherwise, it logs an error message and raises an exception.
 """
+
 import json
-import requests
 import logging
+
+import requests
 
 from config import Config
 
+
 logger = logging.getLogger(__name__)
+
 
 def send_mail(to, cc, subject, mailbody):
     """
@@ -48,20 +52,12 @@ def send_mail(to, cc, subject, mailbody):
         logger.error("LOGIC_APP_EMAIL_URL is not configured. Cannot send email.")
         raise ValueError("LOGIC_APP_EMAIL_URL is required for email functionality")
 
-    email_header = {
-        'Content-Type': 'application/json'
-    }
+    email_header = {"Content-Type": "application/json"}
 
-    email_data = {
-        "to": f"{to}",
-        "cc": f"{cc}",
-        "from": from_email,
-        "subject": f"{subject}",
-        "mailbody": f"{mailbody}"
-    }
+    email_data = {"to": f"{to}", "cc": f"{cc}", "from": from_email, "subject": f"{subject}", "mailbody": f"{mailbody}"}
 
     try:
-        response = requests.post(url, headers=email_header, data=json.dumps(email_data))
+        response = requests.post(url, headers=email_header, data=json.dumps(email_data), timeout=30)
         response.raise_for_status()
     except requests.exceptions.HTTPError as http_err:
         logger.error(f"HTTP error occurred: {http_err}")

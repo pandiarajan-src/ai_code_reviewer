@@ -193,16 +193,20 @@ class TestMainApp:
         """Test pull request review processing"""
         from main import process_pull_request_review
 
-        with patch("main.bitbucket_client") as mock_bb, patch("main.llm_client") as mock_llm:
+        with (
+            patch("main.bitbucket_client") as mock_bb,
+            patch("main.llm_client") as mock_llm,
+            patch("main.send_review_email", new_callable=AsyncMock) as mock_send_email,
+        ):
             mock_bb.get_pull_request_diff = AsyncMock(return_value="mock diff")
             mock_llm.get_code_review = AsyncMock(return_value="Mock review")
-            mock_bb.post_pull_request_comment = AsyncMock(return_value=True)
+            mock_send_email.return_value = True
 
             await process_pull_request_review(sample_pr_webhook)
 
             mock_bb.get_pull_request_diff.assert_called_once()
             mock_llm.get_code_review.assert_called_once()
-            mock_bb.post_pull_request_comment.assert_called_once()
+            mock_send_email.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_process_pull_request_review_no_issues(self, sample_pr_webhook):
@@ -222,13 +226,17 @@ class TestMainApp:
         """Test commit review processing"""
         from main import process_commit_review
 
-        with patch("main.bitbucket_client") as mock_bb, patch("main.llm_client") as mock_llm:
+        with (
+            patch("main.bitbucket_client") as mock_bb,
+            patch("main.llm_client") as mock_llm,
+            patch("main.send_review_email", new_callable=AsyncMock) as mock_send_email,
+        ):
             mock_bb.get_commit_diff = AsyncMock(return_value="mock diff")
             mock_llm.get_code_review = AsyncMock(return_value="Mock review")
-            mock_bb.post_commit_comment = AsyncMock(return_value=True)
+            mock_send_email.return_value = True
 
             await process_commit_review(sample_commit_webhook)
 
             mock_bb.get_commit_diff.assert_called_once()
             mock_llm.get_code_review.assert_called_once()
-            mock_bb.post_commit_comment.assert_called_once()
+            mock_send_email.assert_called_once()
