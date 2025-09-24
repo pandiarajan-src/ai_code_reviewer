@@ -1,6 +1,6 @@
 # AI Code Reviewer Agent
 
-A comprehensive AI-powered code review agent for Bitbucket Enterprise Server that automatically reviews code changes in pull requests and commits using advanced language models.
+A comprehensive AI-powered code review agent for Bitbucket Enterprise Server that automatically reviews code changes in pull requests and commits using advanced language models and sends intelligent feedback via email notifications.
 
 ## Overview
 
@@ -9,8 +9,10 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 ### Key Features
 
 - **Automated Code Review**: Automatically reviews pull requests and commits when triggered by Bitbucket webhooks
+- **Email Notifications**: Sends HTML-formatted review results directly to commit/PR authors via Azure Logic Apps
 - **Multi-LLM Support**: Works with OpenAI GPT models, local Ollama instances, and other LLM providers
 - **Comprehensive Analysis**: Focuses on bug detection, security vulnerabilities, performance issues, and best practices
+- **Intelligent Routing**: Automatically extracts author email from commits/PRs for targeted notifications
 - **Flexible Deployment**: Can run independently or alongside existing CI/CD infrastructure
 - **Docker Ready**: Fully containerized for easy deployment and scaling
 - **Webhook Security**: Supports webhook signature verification for secure communication
@@ -19,12 +21,13 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 
 ### Architecture
 
-The agent follows a webhook-driven architecture:
+The agent follows a webhook-driven architecture with email notifications:
 
 1. **Webhook Listener**: Receives events from Bitbucket when code changes occur
-2. **Bitbucket API Client**: Fetches code diffs and posts review comments
+2. **Bitbucket API Client**: Fetches code diffs and author information
 3. **LLM Integration**: Sends code to AI models for analysis and receives feedback
-4. **Review Engine**: Processes AI responses and formats them for Bitbucket
+4. **Email Notification System**: Formats AI responses as HTML and sends via Azure Logic Apps
+5. **Review Engine**: Processes AI responses and routes notifications to appropriate authors
 
 ## Quick Start
 
@@ -34,6 +37,7 @@ The agent follows a webhook-driven architecture:
 - Python 3.12+ (for local development)
 - Bitbucket Enterprise Server with admin access
 - OpenAI API key OR local Ollama installation
+- Azure Logic App configured for email sending (or similar email service)
 
 ### 1. Clone and Configure
 
@@ -67,6 +71,11 @@ LLM_MODEL=gpt-4o
 
 # Security
 WEBHOOK_SECRET=your_webhook_secret
+
+# Email Configuration (Azure Logic App)
+LOGIC_APP_EMAIL_URL=https://your-logic-app-url
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false
 ```
 
 ### 3. Deploy with Docker
@@ -102,6 +111,9 @@ docker-compose --profile local-llm up -d
 | `LLM_MODEL` | Model name | No | `gpt-4o` |
 | `OLLAMA_HOST` | Ollama server URL (if using local LLM) | No | `http://localhost:11434` |
 | `WEBHOOK_SECRET` | Secret for webhook verification | No | - |
+| `LOGIC_APP_EMAIL_URL` | Azure Logic App HTTP trigger URL | Yes | - |
+| `LOGIC_APP_FROM_EMAIL` | From email address for notifications | No | `pandiarajans@test.com` |
+| `EMAIL_OPTOUT` | Disable email sending for testing | No | `true` |
 | `HOST` | Server bind address | No | `0.0.0.0` |
 | `PORT` | Server port | No | `8000` |
 | `LOG_LEVEL` | Logging level | No | `INFO` |
@@ -142,6 +154,27 @@ curl -fsSL https://ollama.ai/install.sh | sh
 # Pull your preferred model
 ollama pull qwen-coder
 ollama pull llama3
+```
+
+### Email Configuration
+
+The agent uses Azure Logic Apps for email notifications. Configure your Logic App to:
+
+#### Azure Logic App Setup
+1. Create a new Logic App in Azure Portal
+2. Configure HTTP trigger with POST method
+3. Add Office 365 Outlook or SMTP connector
+4. Configure email template to use request body parameters:
+   - `to`: Recipient email address
+   - `cc`: CC email address (optional)
+   - `subject`: Email subject
+   - `mailbody`: HTML email body
+
+#### Environment Configuration
+```bash
+LOGIC_APP_EMAIL_URL=https://your-logic-app-url.azurewebsites.net/api/triggers/manual/invoke?code=your-code
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false  # Set to true to disable emails for testing
 ```
 
 ## API Endpoints

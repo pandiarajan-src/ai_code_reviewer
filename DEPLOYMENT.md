@@ -35,6 +35,7 @@ This comprehensive guide covers all deployment scenarios for the AI Code Reviewe
 - **Bitbucket Enterprise Server**: Admin access to configure webhooks
 - **Service Account**: Dedicated Bitbucket user account for the agent
 - **LLM Provider**: OpenAI API key OR local Ollama installation
+- **Email Service**: Azure Logic App configured for email delivery (or equivalent)
 
 ## Development Setup
 
@@ -188,6 +189,11 @@ WEBHOOK_SECRET=your_secure_webhook_secret
 HOST=0.0.0.0
 PORT=8000
 LOG_LEVEL=INFO
+
+# Email configuration
+LOGIC_APP_EMAIL_URL=https://your-prod-logic-app-url
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false
 ```
 
 ### 4. SSL/TLS Configuration
@@ -326,6 +332,7 @@ stringData:
   bitbucket-token: "your_bitbucket_token"
   llm-api-key: "your_llm_api_key"
   webhook-secret: "your_webhook_secret"
+  logic-app-email-url: "https://your-logic-app-url"
 ```
 
 ### 3. Create ConfigMap
@@ -342,6 +349,8 @@ data:
   LLM_PROVIDER: "openai"
   LLM_MODEL: "gpt-4o"
   LLM_ENDPOINT: "https://api.openai.com/v1/chat/completions"
+  LOGIC_APP_FROM_EMAIL: "noreply@yourcompany.com"
+  EMAIL_OPTOUT: "false"
   HOST: "0.0.0.0"
   PORT: "8000"
   LOG_LEVEL: "INFO"
@@ -390,6 +399,11 @@ spec:
             secretKeyRef:
               name: ai-code-reviewer-secrets
               key: webhook-secret
+        - name: LOGIC_APP_EMAIL_URL
+          valueFrom:
+            secretKeyRef:
+              name: ai-code-reviewer-secrets
+              key: logic-app-email-url
         livenessProbe:
           httpGet:
             path: /health
@@ -571,6 +585,84 @@ curl -X POST https://your-agent-server.com/webhook/code-review \
    sudo systemctl enable ollama
    sudo systemctl start ollama
    ```
+
+## Email Service Configuration
+
+The agent uses Azure Logic Apps for email delivery. Configure your email service for review notifications.
+
+### Azure Logic App Setup
+
+1. **Create Logic App**:
+   - Go to Azure Portal
+   - Create a new Logic App in your resource group
+   - Choose consumption plan for cost-effectiveness
+
+2. **Configure HTTP Trigger**:
+   ```json
+   {
+     "method": "POST",
+     "relativePath": "/",
+     "schema": {
+       "type": "object",
+       "properties": {
+         "to": {"type": "string"},
+         "cc": {"type": "string"},
+         "subject": {"type": "string"},
+         "mailbody": {"type": "string"}
+       }
+     }
+   }
+   ```
+
+3. **Add Email Connector**:
+   - Add Office 365 Outlook or SMTP connector
+   - Configure authentication (service account recommended)
+   - Map request body parameters to email fields
+
+4. **Test Logic App**:
+   ```bash
+   curl -X POST "https://your-logic-app-url" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "to": "developer@company.com",
+       "cc": "",
+       "subject": "Test AI Code Review",
+       "mailbody": "<h1>Test Email</h1><p>This is a test review.</p>"
+     }'
+   ```
+
+### Alternative Email Services
+
+#### SendGrid Configuration
+```bash
+# Install SendGrid SDK in your custom implementation
+pip install sendgrid
+
+# Configure environment
+SENDGRID_API_KEY=your_sendgrid_api_key
+EMAIL_SERVICE_TYPE=sendgrid
+```
+
+#### AWS SES Configuration
+```bash
+# Configure AWS credentials
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_REGION=us-east-1
+EMAIL_SERVICE_TYPE=ses
+```
+
+### Email Configuration Environment Variables
+
+```bash
+# Azure Logic App (default)
+LOGIC_APP_EMAIL_URL=https://your-logic-app-url.azurewebsites.net/api/triggers/manual/invoke?code=your-code
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false
+
+# Email testing
+EMAIL_OPTOUT=true  # Disables email sending for development
+```
 
 ## Security Configuration
 

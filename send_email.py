@@ -18,7 +18,8 @@ OUTPUTS:
 import json
 import requests
 import logging
-import os
+
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,9 @@ def send_mail(to, cc, subject, mailbody):
     and so the from address is constant now.
     """
 
-    url = os.getenv("LOGIC_APP_EMAIL_URL")
-    from_email = os.getenv("LOGIC_APP_FROM_EMAIL", "pandiarajans@test.com")
-    email_optout = os.getenv("EMAIL_OPTOUT", "true").lower() == "true"
+    url = Config.LOGIC_APP_EMAIL_URL
+    from_email = Config.LOGIC_APP_FROM_EMAIL
+    email_optout = Config.EMAIL_OPTOUT
 
     if email_optout:
         logger.warning(
@@ -42,6 +43,10 @@ def send_mail(to, cc, subject, mailbody):
             f"and mailbody: {mailbody} \n Cancelled"
         )
         return
+
+    if not url:
+        logger.error("LOGIC_APP_EMAIL_URL is not configured. Cannot send email.")
+        raise ValueError("LOGIC_APP_EMAIL_URL is required for email functionality")
 
     email_header = {
         'Content-Type': 'application/json'

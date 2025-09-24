@@ -12,6 +12,11 @@ class Config:
 
     WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")  # Secret for Bitbucket webhooks
 
+    # Email configuration
+    LOGIC_APP_EMAIL_URL = os.getenv("LOGIC_APP_EMAIL_URL")  # Required for email notifications
+    LOGIC_APP_FROM_EMAIL = os.getenv("LOGIC_APP_FROM_EMAIL", "pandiarajans@test.com")
+    EMAIL_OPTOUT = os.getenv("EMAIL_OPTOUT", "true").lower() == "true"  # Default to true for testing
+
     # Paths for local LLM (if using Ollama)
     OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
@@ -51,6 +56,9 @@ Please provide your review:"""
 
         if cls.LLM_PROVIDER == "openai" and not cls.LLM_API_KEY:
             errors.append("LLM_API_KEY is required when using OpenAI provider")
+
+        if not cls.EMAIL_OPTOUT and not cls.LOGIC_APP_EMAIL_URL:
+            errors.append("LOGIC_APP_EMAIL_URL is required when EMAIL_OPTOUT is false")
 
         if errors:
             raise ValueError(f"Configuration errors: {', '.join(errors)}")

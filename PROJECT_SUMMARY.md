@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project delivers a complete, production-ready AI-powered code review agent for Bitbucket Enterprise Server. The agent automatically reviews code changes in pull requests and commits using advanced language models, providing intelligent feedback to improve code quality and accelerate development workflows.
+This project delivers a complete, production-ready AI-powered code review agent for Bitbucket Enterprise Server. The agent automatically reviews code changes in pull requests and commits using advanced language models, then sends intelligent feedback via HTML email notifications directly to code authors to improve code quality and accelerate development workflows.
 
 ## Key Features Implemented
 
@@ -10,7 +10,8 @@ This project delivers a complete, production-ready AI-powered code review agent 
 - **Webhook-driven Architecture**: Automatically triggered by Bitbucket events
 - **Multi-LLM Support**: Works with OpenAI GPT models and local Ollama instances
 - **Comprehensive Code Analysis**: Focuses on bugs, security, performance, and best practices
-- **Automated Comment Posting**: Posts AI reviews directly to pull requests and commits
+- **Email Notification System**: Sends HTML-formatted review results to commit/PR authors via Azure Logic Apps
+- **Intelligent Author Detection**: Automatically extracts author emails from Bitbucket commit/PR information
 - **Manual Review Triggers**: API endpoints for on-demand code reviews
 
 ### ✅ Technical Implementation
@@ -37,10 +38,11 @@ This project delivers a complete, production-ready AI-powered code review agent 
 
 ```
 ai_code_reviewer/
-├── main.py                 # FastAPI application entry point
+├── main.py                 # FastAPI application entry point with email system
 ├── config.py              # Configuration management
 ├── bitbucket_client.py    # Bitbucket API integration
 ├── llm_client.py          # LLM provider integration
+├── send_email.py          # Azure Logic Apps email integration
 ├── requirements.txt       # Python dependencies
 ├── test_requirements.txt  # Test dependencies
 ├── Dockerfile            # Container definition
@@ -103,6 +105,9 @@ LLM_PROVIDER=openai
 LLM_API_KEY=sk-your-openai-key
 LLM_MODEL=gpt-4o
 WEBHOOK_SECRET=your_secure_secret
+LOGIC_APP_EMAIL_URL=https://your-logic-app-url
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false
 ```
 
 ### Local LLM Configuration
@@ -113,6 +118,9 @@ LLM_PROVIDER=local_ollama
 OLLAMA_HOST=http://localhost:11434
 LLM_MODEL=qwen-coder
 WEBHOOK_SECRET=your_secure_secret
+LOGIC_APP_EMAIL_URL=https://your-logic-app-url
+LOGIC_APP_FROM_EMAIL=noreply@yourcompany.com
+EMAIL_OPTOUT=false
 ```
 
 ## API Endpoints
@@ -189,8 +197,10 @@ The project includes a comprehensive test suite covering:
 - Support for additional LLM providers (Anthropic Claude, Azure OpenAI)
 - Advanced review customization per repository
 - Integration with other code review tools
-- Metrics and analytics dashboard
+- Metrics and analytics dashboard for email delivery tracking
 - Multi-language support for review comments
+- Email template customization per organization
+- Integration with other email providers (SendGrid, AWS SES)
 
 ## Deployment Readiness
 
@@ -225,7 +235,7 @@ The project includes a comprehensive test suite covering:
 
 ## Conclusion
 
-This AI Code Reviewer Agent provides a robust, scalable, and secure solution for automated code reviews in Bitbucket Enterprise environments. The implementation follows best practices for production deployment while maintaining flexibility for different organizational needs and infrastructure requirements.
+This AI Code Reviewer Agent provides a robust, scalable, and secure solution for automated code reviews in Bitbucket Enterprise environments with intelligent email notification delivery. The implementation follows best practices for production deployment while maintaining flexibility for different organizational needs and infrastructure requirements.
 
-The agent is ready for immediate deployment and can significantly improve code quality and development velocity by providing consistent, intelligent code reviews powered by state-of-the-art language models.
+The agent is ready for immediate deployment and can significantly improve code quality and development velocity by providing consistent, intelligent code reviews powered by state-of-the-art language models. The email notification system ensures developers receive timely, actionable feedback directly in their inbox, streamlining the code review process and improving overall development workflows.
 

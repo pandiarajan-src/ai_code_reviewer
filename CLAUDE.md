@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
-AI-powered code review agent for Bitbucket Enterprise Server that automatically reviews pull requests and commits using LLMs (OpenAI GPT-4, local Ollama).
+AI-powered code review agent for Bitbucket Enterprise Server that automatically reviews pull requests and commits using LLMs (OpenAI GPT-4, local Ollama). The agent sends intelligent code review feedback via email notifications to commit/PR authors using Azure Logic Apps integration.
 
 ## Key Commands
 
@@ -61,15 +61,17 @@ docker-compose logs -f ai-code-reviewer
 ## Architecture
 
 ### Core Components
-- **main.py**: FastAPI application entry point, webhook handlers, API endpoints
-- **bitbucket_client.py**: Bitbucket Enterprise API integration for fetching diffs and posting comments
+- **main.py**: FastAPI application entry point, webhook handlers, API endpoints, email notification system
+- **bitbucket_client.py**: Bitbucket Enterprise API integration for fetching diffs and author information
 - **llm_client.py**: LLM provider abstraction supporting OpenAI and Ollama
+- **send_email.py**: Azure Logic Apps email integration for sending review notifications
 - **config.py**: Configuration management and validation, contains review prompt templates
 
 ### Key Integrations
 1. **Webhook Processing**: Receives Bitbucket webhooks (PR opened/updated, commits pushed), validates signatures, triggers async review
-2. **Review Pipeline**: Fetches diff from Bitbucket → Sends to LLM with structured prompt → Parses response → Posts as PR comment
-3. **LLM Providers**: Supports OpenAI (cloud) and Ollama (local) with provider abstraction in LLMClient
+2. **Review Pipeline**: Fetches diff from Bitbucket → Sends to LLM with structured prompt → Parses response → Sends HTML email to author
+3. **Email Notifications**: Uses Azure Logic Apps to send formatted HTML email notifications to commit/PR authors
+4. **LLM Providers**: Supports OpenAI (cloud) and Ollama (local) with provider abstraction in LLMClient
 
 ### API Endpoints
 - `/health`: Comprehensive health check (Bitbucket connectivity, LLM status)
@@ -83,6 +85,9 @@ Required environment variables are defined in config.py with validation. Key var
 - `LLM_API_KEY`: For OpenAI provider
 - `OLLAMA_HOST`: For local Ollama provider
 - `WEBHOOK_SECRET`: Optional webhook signature verification
+- `LOGIC_APP_EMAIL_URL`: Azure Logic App HTTP trigger URL for email notifications
+- `LOGIC_APP_FROM_EMAIL`: From email address for notifications (default: pandiarajans@test.com)
+- `EMAIL_OPTOUT`: Set to "true" to disable email sending for testing (default: true)
 
 ## Testing Strategy
 - Unit tests in `tests/` directory with pytest fixtures in `conftest.py`
