@@ -27,19 +27,17 @@ class TestMainApp:
         assert data["status"] == "healthy"
 
     def test_health_endpoint_success(self, client):
-        """Test health check endpoint success"""
-        with patch("main.bitbucket_client") as mock_bb, patch("main.llm_client") as mock_llm:
-            mock_bb.test_connection = AsyncMock(return_value={"status": "connected"})
-            mock_llm.test_connection = AsyncMock(return_value={"status": "connected"})
+        """Test basic health check endpoint success"""
+        response = client.get("/health")
 
-            response = client.get("/health")
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "healthy"
-            assert "bitbucket" in data
-            assert "llm" in data
-            assert "config" in data
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "timestamp" in data
+        assert "config" in data
+        # Basic health check should NOT include bitbucket/llm status
+        assert "bitbucket" not in data
+        assert "llm" not in data
 
     def test_health_endpoint_failure(self, client):
         """Test health check endpoint failure"""
@@ -50,6 +48,22 @@ class TestMainApp:
             data = response.json()
             assert data["status"] == "unhealthy"
             assert "error" in data
+
+    def test_detailed_health_endpoint_success(self, client):
+        """Test detailed health check endpoint success"""
+        with patch("main.bitbucket_client") as mock_bb, patch("main.llm_client") as mock_llm:
+            mock_bb.test_connection = AsyncMock(return_value={"status": "connected"})
+            mock_llm.test_connection = AsyncMock(return_value={"status": "connected"})
+
+            response = client.get("/health/detailed")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["status"] == "healthy"
+            assert "timestamp" in data
+            assert "bitbucket" in data
+            assert "llm" in data
+            assert "config" in data
 
     def test_webhook_pr_opened(self, client, sample_pr_webhook):
         """Test webhook handling for PR opened event"""

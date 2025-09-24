@@ -129,9 +129,9 @@ health: ## Check application health
 	@echo "🏥 Checking application health..."
 	@curl -f http://localhost:$(SERVER_PORT)/health || echo "❌ Health check failed - is the server running?"
 
-health-detailed: ## Detailed health check with JSON output
-	@echo "🔍 Detailed health check..."
-	@curl -s http://localhost:$(SERVER_PORT)/health | python -m json.tool || echo "❌ Health check failed or invalid JSON"
+health-detailed: ## Detailed health check with external API validation
+	@echo "🔍 Detailed health check (includes external API calls)..."
+	@curl -s http://localhost:$(SERVER_PORT)/health/detailed | python -m json.tool || echo "❌ Health check failed or invalid JSON"
 
 # Utility targets
 clean: ## Clean temporary files and caches

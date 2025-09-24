@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+from datetime import datetime
 from typing import Any
 
 import uvicorn
@@ -149,7 +150,27 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Detailed health check"""
+    """Basic health check - lightweight for container health checks"""
+    try:
+        # Only validate configuration (no external API calls)
+        Config.validate_config()
+
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "config": {
+                "bitbucket_url": Config.BITBUCKET_URL,
+                "llm_provider": Config.LLM_PROVIDER,
+                "llm_model": Config.LLM_MODEL,
+            },
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+
+@app.get("/health/detailed")
+async def detailed_health_check():
+    """Comprehensive health check with external API validation"""
     try:
         # Validate configuration
         Config.validate_config()
@@ -162,6 +183,7 @@ async def health_check():
 
         return {
             "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
             "bitbucket": bitbucket_status,
             "llm": llm_status,
             "config": {
