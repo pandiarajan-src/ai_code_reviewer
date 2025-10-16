@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from llm_client import LLMClient
+from ai_code_reviewer.clients.llm_client import LLMClient
 
 
 class TestLLMClient:

@@ -19,15 +19,61 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 - **Manual Triggers**: Provides API endpoints for manual code review requests
 - **Health Monitoring**: Built-in health checks and monitoring endpoints
 
+### Project Structure
+
+The project follows a clean, modular architecture:
+
+```
+src/ai_code_reviewer/        # Main application package
+├── api/                     # FastAPI application layer
+│   ├── app.py              # App initialization
+│   ├── routes/             # API route handlers
+│   │   ├── health.py       # Health check endpoints
+│   │   ├── webhook.py      # Webhook handlers
+│   │   └── manual.py       # Manual review endpoints
+│   └── dependencies.py     # Dependency injection
+├── core/                    # Core business logic
+│   ├── config.py           # Configuration management
+│   ├── review_engine.py    # Review processing orchestration
+│   └── email_formatter.py  # Email HTML formatting
+├── clients/                 # External API clients
+│   ├── bitbucket_client.py # Bitbucket API integration
+│   ├── llm_client.py       # LLM provider abstraction
+│   └── email_client.py     # Email sending via Logic Apps
+└── main.py                 # Application entry point
+
+tests/                       # Test suite
+├── unit/                   # Unit tests
+├── integration/            # Integration tests
+└── conftest.py             # Shared test configuration
+
+scripts/                    # Development tools
+├── lint.sh                # Linting automation
+└── run_tests.py           # Test runner
+
+docker/                     # Docker configuration
+├── Dockerfile             # Container definition
+└── docker-compose.yml     # Multi-container orchestration
+
+docs/                       # Documentation
+├── architecture.md        # System architecture
+├── development.md         # Development guide
+└── deployment.md          # Deployment instructions
+```
+
 ### Architecture
 
-The agent follows a webhook-driven architecture with email notifications:
+The agent follows a clean layered architecture with webhook-driven workflow:
 
-1. **Webhook Listener**: Receives events from Bitbucket when code changes occur
-2. **Bitbucket API Client**: Fetches code diffs and author information
-3. **LLM Integration**: Sends code to AI models for analysis and receives feedback
-4. **Email Notification System**: Formats AI responses as HTML and sends via Azure Logic Apps
-5. **Review Engine**: Processes AI responses and routes notifications to appropriate authors
+1. **API Layer**: FastAPI routes for webhooks, health checks, and manual triggers
+2. **Core Layer**: Business logic for review orchestration and email formatting
+3. **Client Layer**: External service integrations (Bitbucket, LLM, Email)
+
+**Workflow**:
+1. Bitbucket sends webhook → API receives and validates
+2. Review engine fetches code diff → Sends to LLM for analysis
+3. LLM returns feedback → Format as HTML email
+4. Send email to commit/PR author via Azure Logic Apps
 
 ## Quick Start
 
@@ -82,10 +128,14 @@ EMAIL_OPTOUT=false
 
 ```bash
 # For OpenAI/Cloud LLM
-docker-compose up -d
+docker-compose -f docker/docker-compose.yml up -d
 
 # For local LLM with Ollama
-docker-compose --profile local-llm up -d
+docker-compose -f docker/docker-compose.yml --profile local-llm up -d
+
+# Or use Makefile (recommended)
+make docker-build
+make docker-run
 ```
 
 ### 4. Configure Bitbucket Webhooks
@@ -189,22 +239,38 @@ EMAIL_OPTOUT=false  # Set to true to disable emails for testing
 - **POST** `/manual-review` - Manually trigger code review
   - Parameters: `project_key`, `repo_slug`, `pr_id` OR `commit_id`
 
-## Testing
+## Development
+
+### Local Setup
+
+```bash
+# Install development dependencies
+make install-dev
+
+# Or manually with pip
+pip install -e ".[dev]"
+```
+
+### Testing
 
 Run the comprehensive test suite:
 
 ```bash
-# Install test dependencies
-pip install -r test_requirements.txt
-
 # Run all tests
-python run_tests.py
+make test
+# Or: python scripts/run_tests.py
 
 # Run specific test categories
-pytest tests/test_config.py -v
-pytest tests/test_bitbucket_client.py -v
-pytest tests/test_llm_client.py -v
-pytest tests/test_main.py -v
+make test-unit        # Unit tests only
+make test-integration # Integration tests only
+
+# Run specific test modules
+pytest tests/unit/test_config.py -v
+pytest tests/unit/test_bitbucket_client.py -v
+pytest tests/integration/test_main.py -v
+
+# With coverage report
+pytest tests/ -v --cov=src --cov-report=html
 ```
 
 ### Code Quality & Linting
@@ -212,17 +278,28 @@ pytest tests/test_main.py -v
 The project includes comprehensive linting tools for code quality:
 
 ```bash
-# Install linting dependencies
-pip install -r dev_requirements.txt
-
 # Run comprehensive linting (ruff, black, mypy) with auto-fix
-./lint.sh
+make lint
+# Or: ./scripts/lint.sh
 
 # Check code quality without making changes
-./lint.sh --check-only
+./scripts/lint.sh --check-only
 
 # Run linting without auto-fix
-./lint.sh --no-fix
+./scripts/lint.sh --no-fix
+
+# Type checking
+make type-check
+```
+
+### Running Locally
+
+```bash
+# Start development server
+make dev
+# Or: python -m ai_code_reviewer.main
+
+# Server will be available at http://localhost:8000
 ```
 
 The linting script uses:

@@ -110,11 +110,11 @@ Repository = "https://github.com/your-org/ai-code-reviewer.git"
 Issues = "https://github.com/your-org/ai-code-reviewer/issues"
 
 [project.scripts]
-ai-code-reviewer = "main:main"
+ai-code-reviewer = "ai_code_reviewer.main:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["*"]
+where = ["src"]
+include = ["ai_code_reviewer*"]
 exclude = ["tests*", "htmlcov*", "__pycache__*"]
 
 [tool.ruff]
@@ -253,7 +253,7 @@ asyncio_mode = "auto"
 
 [tool.coverage.run]
 # Coverage configuration
-source = ["."]
+source = ["src"]
 omit = [
     "tests/*",
     "venv/*",
@@ -263,6 +263,7 @@ omit = [
     "htmlcov/*",
     "build/*",
     "dist/*",
+    "scripts/*",
 ]
 branch = true
 

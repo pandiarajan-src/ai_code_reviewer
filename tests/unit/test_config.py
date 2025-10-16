@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from config import Config
+from ai_code_reviewer.core.config import Config
 
 
 class TestConfig:

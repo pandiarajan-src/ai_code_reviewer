@@ -3,7 +3,7 @@ from typing import Any
 
 import httpx
 
-from config import Config
+from ai_code_reviewer.core.config import Config
 
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app
+from ai_code_reviewer.main import app
 
 
 class TestMainApp:

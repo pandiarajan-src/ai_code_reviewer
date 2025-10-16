@@ -13,9 +13,9 @@ os.environ["LLM_API_KEY"] = "test_api_key"
 os.environ["LLM_MODEL"] = "gpt-4o"
 os.environ["WEBHOOK_SECRET"] = "test_secret"
 
-from bitbucket_client import BitbucketClient
-from llm_client import LLMClient
-from main import app
+from ai_code_reviewer.clients.bitbucket_client import BitbucketClient
+from ai_code_reviewer.clients.llm_client import LLMClient
+from ai_code_reviewer.main import app
 
 
 @pytest.fixture

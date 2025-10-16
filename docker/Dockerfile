@@ -16,7 +16,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+# Build context is parent directory, so paths are relative to that
+COPY src ./src
+COPY .env.example ./.env.example
+COPY pyproject.toml ./pyproject.toml
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
@@ -31,6 +34,6 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Run the application
-CMD ["python", "main.py"]
+# Run the application using Python module syntax
+CMD ["python", "-m", "ai_code_reviewer.main"]
 

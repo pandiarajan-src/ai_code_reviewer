@@ -38,20 +38,20 @@ install-dev: ## Install all dependencies including development tools
 # Testing targets
 test: ## Run all tests with coverage
 	@echo "🧪 Running all tests with coverage..."
-	$(PYTHON) run_tests.py
+	$(PYTHON) scripts/run_tests.py
 
 test-coverage: ## Run tests and generate detailed coverage report
 	@echo "📊 Running tests with detailed coverage report..."
-	$(PYTEST) tests/ -v --cov=. --cov-report=term-missing --cov-report=html --cov-fail-under=$(COVERAGE_MIN)
+	$(PYTEST) tests/ -v --cov=src --cov-report=term-missing --cov-report=html --cov-fail-under=$(COVERAGE_MIN)
 	@echo "📄 Coverage report generated in htmlcov/"
 
 test-unit: ## Run only unit tests
 	@echo "🔬 Running unit tests..."
-	$(PYTEST) tests/ -v -m "unit" --cov=. --cov-report=term-missing
+	$(PYTEST) tests/unit/ -v --cov=src --cov-report=term-missing
 
 test-integration: ## Run only integration tests
 	@echo "🔗 Running integration tests..."
-	$(PYTEST) tests/ -v -m "integration" --cov=. --cov-report=term-missing
+	$(PYTEST) tests/integration/ -v --cov=src --cov-report=term-missing
 
 test-fast: ## Run tests without coverage (faster)
 	@echo "⚡ Running fast tests..."
@@ -60,11 +60,11 @@ test-fast: ## Run tests without coverage (faster)
 # Code Quality targets
 lint: ## Run comprehensive linting with auto-fix
 	@echo "🔧 Running comprehensive linting with auto-fix..."
-	./lint.sh
+	./scripts/lint.sh
 
 lint-check: ## Check code quality without making changes
 	@echo "🔍 Checking code quality..."
-	./lint.sh --check-only
+	./scripts/lint.sh --check-only
 
 format: ## Format code with black and ruff
 	@echo "🎨 Formatting code..."
@@ -74,7 +74,7 @@ format: ## Format code with black and ruff
 
 type-check: ## Run type checking with mypy
 	@echo "🔍 Running type checking..."
-	mypy *.py --ignore-missing-imports
+	mypy src/ --ignore-missing-imports
 	mypy tests/ --ignore-missing-imports
 
 # Development server targets
@@ -82,7 +82,7 @@ dev: ## Start development server with auto-reload
 	@echo "🚀 Starting development server..."
 	@echo "Server will be available at http://$(SERVER_HOST):$(SERVER_PORT)"
 	@echo "Press Ctrl+C to stop"
-	$(PYTHON) main.py
+	$(PYTHON) -m ai_code_reviewer.main
 
 server: dev ## Alias for dev command
 
@@ -93,34 +93,34 @@ stop: ## Stop any running Python processes (development server)
 # Docker targets
 docker-build: ## Build Docker image
 	@echo "🐳 Building Docker image..."
-	docker build -t ai-code-reviewer .
+	docker build -f docker/Dockerfile -t ai-code-reviewer .
 	@echo "✅ Docker image built successfully!"
 
 docker-run: ## Run application in Docker container
 	@echo "🐳 Starting Docker container..."
-	docker-compose up -d
+	docker-compose -f docker/docker-compose.yml up -d
 	@echo "✅ Container started! Check status with 'make docker-logs'"
 
 docker-run-local: ## Run with local Ollama LLM
 	@echo "🐳 Starting with local Ollama LLM..."
-	docker-compose --profile local-llm up -d
+	docker-compose -f docker/docker-compose.yml --profile local-llm up -d
 	@echo "✅ Container with local LLM started!"
 
 docker-stop: ## Stop Docker containers
 	@echo "🛑 Stopping Docker containers..."
-	docker-compose down
+	docker-compose -f docker/docker-compose.yml down
 
 docker-logs: ## View Docker container logs
 	@echo "📋 Viewing container logs (Ctrl+C to exit)..."
-	docker-compose logs -f ai-code-reviewer
+	docker-compose -f docker/docker-compose.yml logs -f ai-code-reviewer
 
 docker-logs-ollama: ## View Ollama container logs
 	@echo "📋 Viewing Ollama logs (Ctrl+C to exit)..."
-	docker-compose logs -f ollama
+	docker-compose -f docker/docker-compose.yml logs -f ollama
 
 docker-clean: ## Clean Docker containers and images
 	@echo "🧹 Cleaning Docker containers and images..."
-	docker-compose down --volumes --remove-orphans
+	docker-compose -f docker/docker-compose.yml down --volumes --remove-orphans
 	docker image prune -f
 	@echo "✅ Docker cleanup completed!"
 
