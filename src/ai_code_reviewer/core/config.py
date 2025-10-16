@@ -57,6 +57,10 @@ Please provide your review:"""
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+    # Database configuration
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ai_code_reviewer.db")
+    DATABASE_ECHO = os.getenv("DATABASE_ECHO", "false").lower() == "true"  # Enable SQL query logging
+
     @classmethod
     def validate_config(cls):
         """Validate that required configuration is present"""

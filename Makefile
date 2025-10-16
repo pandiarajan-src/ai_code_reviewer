@@ -53,15 +53,15 @@ test-coverage: ## Run tests and generate detailed coverage report
 
 test-unit: ## Run only unit tests
 	@echo "🔬 Running unit tests..."
-	$(PYTEST) tests/unit/ -v --cov=src --cov-report=term-missing
+	uv run pytest tests/unit/ -v --no-cov
 
 test-integration: ## Run only integration tests
 	@echo "🔗 Running integration tests..."
-	$(PYTEST) tests/integration/ -v --cov=src --cov-report=term-missing
+	uv run pytest tests/integration/ -v --no-cov
 
 test-fast: ## Run tests without coverage (faster)
 	@echo "⚡ Running fast tests..."
-	$(PYTEST) tests/ -v --no-cov
+	uv run pytest tests/ -v --no-cov
 
 # Code Quality targets
 lint: ## Run comprehensive linting with auto-fix

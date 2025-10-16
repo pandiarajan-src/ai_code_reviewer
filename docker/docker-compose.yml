@@ -33,8 +33,13 @@ services:
       - HOST=0.0.0.0
       - PORT=${PORT:-8000}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:////app/data/ai_code_reviewer.db}
+      - DATABASE_ECHO=${DATABASE_ECHO:-false}
     volumes:
       - ./logs:/app/logs
+      - db_data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8000}/health"]
@@ -55,4 +60,5 @@ services:
       - local-llm
 
 volumes:
+  db_data:
   ollama_data:

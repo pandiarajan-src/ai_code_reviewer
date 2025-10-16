@@ -25,8 +25,11 @@ COPY README.md ./README.md
 # Install the package in editable mode
 RUN pip install --no-cache-dir -e .
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
+# Create non-root user for security and create data directory for database
+RUN useradd --create-home --shell /bin/bash app && \
+    mkdir -p /app/data && \
+    chown -R app:app /app
+
 USER app
 
 # Expose port (use PORT environment variable, default 8000)

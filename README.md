@@ -10,6 +10,7 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 
 - **Automated Code Review**: Automatically reviews pull requests and commits when triggered by Bitbucket webhooks
 - **Email Notifications**: Sends HTML-formatted review results directly to commit/PR authors via Azure Logic Apps
+- **Review History Database**: Stores all review records with metadata for tracking and auditing
 - **Multi-LLM Support**: Works with OpenAI GPT models, local Ollama instances, and other LLM providers
 - **Comprehensive Analysis**: Focuses on bug detection, security vulnerabilities, performance issues, and best practices
 - **Intelligent Routing**: Automatically extracts author email from commits/PRs for targeted notifications
@@ -17,6 +18,7 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 - **Docker Ready**: Fully containerized for easy deployment and scaling
 - **Webhook Security**: Supports webhook signature verification for secure communication
 - **Manual Triggers**: Provides API endpoints for manual code review requests
+- **Review Retrieval APIs**: Query review history by project, author, commit, or PR
 - **Health Monitoring**: Built-in health checks and monitoring endpoints
 
 ### Project Structure
@@ -30,7 +32,8 @@ src/ai_code_reviewer/        # Main application package
 │   ├── routes/             # API route handlers
 │   │   ├── health.py       # Health check endpoints
 │   │   ├── webhook.py      # Webhook handlers
-│   │   └── manual.py       # Manual review endpoints
+│   │   ├── manual.py       # Manual review endpoints
+│   │   └── reviews.py      # Review retrieval endpoints
 │   └── dependencies.py     # Dependency injection
 ├── core/                    # Core business logic
 │   ├── config.py           # Configuration management
@@ -40,6 +43,10 @@ src/ai_code_reviewer/        # Main application package
 │   ├── bitbucket_client.py # Bitbucket API integration
 │   ├── llm_client.py       # LLM provider abstraction
 │   └── email_client.py     # Email sending via Logic Apps
+├── db/                      # Database layer
+│   ├── models.py           # SQLAlchemy models
+│   ├── database.py         # Database configuration
+│   └── repository.py       # Data access layer
 └── main.py                 # Application entry point
 
 tests/                       # Test suite
@@ -168,6 +175,8 @@ make docker-run
 | `HOST` | Server bind address | No | `0.0.0.0` |
 | `PORT` | Server port | No | `8000` |
 | `LOG_LEVEL` | Logging level | No | `INFO` |
+| `DATABASE_URL` | Database connection URL | No | `sqlite+aiosqlite:///./ai_code_reviewer.db` |
+| `DATABASE_ECHO` | Enable SQL query logging | No | `false` |
 
 ### Bitbucket Token Setup
 
@@ -239,6 +248,141 @@ EMAIL_OPTOUT=false  # Set to true to disable emails for testing
 ### Manual Review
 - **POST** `/manual-review` - Manually trigger code review
   - Parameters: `project_key`, `repo_slug`, `pr_id` OR `commit_id`
+  - Returns: Review result and database record ID
+
+### Review History Retrieval
+
+All review records are automatically saved to the database with complete metadata including:
+- Date/time of review
+- Review type (auto/manual)
+- Trigger type (commit/pull_request)
+- Project and repository information
+- Commit ID or PR ID
+- Author name and email
+- Code diff content
+- Review feedback
+- Email recipients and delivery status
+- LLM provider and model used
+
+#### Available Endpoints:
+
+- **GET** `/reviews/latest?limit=10` - Get last N review records
+  - Query param: `limit` (1-100, default: 10)
+
+- **GET** `/reviews?offset=0&limit=10` - Get paginated reviews
+  - Query params: `offset` (starting record, default: 0), `limit` (1-100, default: 10)
+  - Returns: Total count, offset, limit, and records
+
+- **GET** `/reviews/{review_id}` - Get specific review by ID
+
+- **GET** `/reviews/project/{project_key}?repo_slug=repo&limit=10` - Get reviews by project/repo
+  - Query params: `repo_slug` (optional), `limit` (default: 10)
+
+- **GET** `/reviews/author/{author_email}?limit=10` - Get reviews by author email
+  - Query param: `limit` (default: 10)
+
+- **GET** `/reviews/commit/{commit_id}` - Get all reviews for a specific commit
+
+- **GET** `/reviews/pr/{pr_id}` - Get all reviews for a specific pull request
+
+#### Example API Calls:
+
+```bash
+# Get last 5 reviews
+curl http://localhost:8000/reviews/latest?limit=5
+
+# Get reviews with pagination (records 10-19)
+curl http://localhost:8000/reviews?offset=10&limit=10
+
+# Get specific review by ID
+curl http://localhost:8000/reviews/42
+
+# Get reviews for a project
+curl http://localhost:8000/reviews/project/PROJ?repo_slug=my-repo&limit=20
+
+# Get reviews by author
+curl http://localhost:8000/reviews/author/developer@company.com?limit=15
+
+# Get reviews for a commit
+curl http://localhost:8000/reviews/commit/abc123def456
+
+# Get reviews for a PR
+curl http://localhost:8000/reviews/pr/123
+```
+
+### Database Configuration
+
+By default, the application uses SQLite for simplicity. You can configure a different database using the `DATABASE_URL` environment variable:
+
+```bash
+# SQLite (default)
+DATABASE_URL=sqlite+aiosqlite:///./ai_code_reviewer.db
+
+# PostgreSQL
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/ai_code_reviewer
+
+# MySQL
+DATABASE_URL=mysql+aiomysql://user:password@localhost/ai_code_reviewer
+```
+
+The database is automatically initialized on application startup. No manual migration is required for the initial setup.
+
+### Database Management Script
+
+A comprehensive database helper script is provided for development and testing:
+
+```bash
+# Create/initialize database
+python scripts/db_helper.py create
+
+# Reset database (drop and recreate all tables)
+python scripts/db_helper.py reset
+
+# Clean all records (keep schema)
+python scripts/db_helper.py clean
+
+# Show database statistics
+python scripts/db_helper.py stats
+
+# Seed test data for development
+python scripts/db_helper.py seed
+
+# List recent reviews
+python scripts/db_helper.py list --limit 20
+
+# Backup database (SQLite only)
+python scripts/db_helper.py backup
+python scripts/db_helper.py backup --file my_backup.db
+
+# Restore from backup (SQLite only)
+python scripts/db_helper.py restore --file my_backup.db
+```
+
+This script is particularly useful for:
+- Setting up test data for API testing
+- Resetting database between test runs
+- Development and debugging
+- Creating backups before major changes
+
+### Docker Database Persistence
+
+When running with Docker, the database is stored in a persistent volume:
+
+```bash
+# Start with Docker Compose (database persists across restarts)
+docker-compose -f docker/docker-compose.yml up -d
+
+# View logs
+docker-compose -f docker/docker-compose.yml logs -f ai-code-reviewer
+
+# Stop (data persists)
+docker-compose -f docker/docker-compose.yml down
+
+# Remove including database volume (CAUTION: deletes all data)
+docker-compose -f docker/docker-compose.yml down -v
+```
+
+The database volume `db_data` persists the SQLite database file at `/app/data/ai_code_reviewer.db` inside the container. This ensures review history is retained across container restarts.
 
 ## Development
 

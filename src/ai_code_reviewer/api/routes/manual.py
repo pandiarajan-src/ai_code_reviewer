@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from ai_code_reviewer.api.dependencies import get_bitbucket_client, get_llm_client
-from ai_code_reviewer.core.review_engine import send_review_email
+from ai_code_reviewer.core.review_engine import save_review_to_database, send_review_email
 
 
 logger = logging.getLogger(__name__)
@@ -32,11 +32,26 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                     # )
 
                     # Send review email
-                    await send_review_email(
+                    email_sent, author_email, author_name = await send_review_email(
                         bitbucket_client, project_key, repo_slug, review, "AI Code Review (Manual)", pr_id=pr_id
                     )
 
-                return {"status": "completed", "review": review}
+                    # Save to database
+                    record_id = await save_review_to_database(
+                        review_type="manual",
+                        trigger_type="pull_request",
+                        project_key=project_key,
+                        repo_slug=repo_slug,
+                        diff_content=diff,
+                        review_feedback=review,
+                        pr_id=pr_id,
+                        author_name=author_name,
+                        author_email=author_email,
+                        email_recipients=[author_email] if author_email else None,
+                        email_sent=email_sent,
+                    )
+
+                return {"status": "completed", "review": review, "record_id": record_id}
             else:
                 return {"status": "no_diff", "message": "No diff found"}
 
@@ -52,11 +67,26 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                     # )
 
                     # Send review email
-                    await send_review_email(
+                    email_sent, author_email, author_name = await send_review_email(
                         bitbucket_client, project_key, repo_slug, review, "AI Code Review (Manual)", commit_id=commit_id
                     )
 
-                return {"status": "completed", "review": review}
+                    # Save to database
+                    record_id = await save_review_to_database(
+                        review_type="manual",
+                        trigger_type="commit",
+                        project_key=project_key,
+                        repo_slug=repo_slug,
+                        diff_content=diff,
+                        review_feedback=review,
+                        commit_id=commit_id,
+                        author_name=author_name,
+                        author_email=author_email,
+                        email_recipients=[author_email] if author_email else None,
+                        email_sent=email_sent,
+                    )
+
+                return {"status": "completed", "review": review, "record_id": record_id}
             else:
                 return {"status": "no_diff", "message": "No diff found"}
 
