@@ -65,10 +65,10 @@ async def send_review_email(
     review_type: str = "AI Code Review",
     commit_id: str | None = None,
     pr_id: int | None = None,
-) -> tuple[bool, str | None, str | None]:
-    """Send review email to author. Returns (success, author_email, author_name) tuple."""
+) -> tuple[bool, list[str], str | None]:
+    """Send review email to author and reviewers (for PRs). Returns (success, recipient_emails, author_name) tuple."""
     try:
-        author_email = None
+        recipient_emails = []
         author_name = None
         subject_id = "Unknown"
 
@@ -79,20 +79,33 @@ async def send_review_email(
                 author_data = commit_info["author"]
                 author_email = author_data.get("emailAddress")
                 author_name = author_data.get("displayName") or author_data.get("name")
-                subject_id = f"Commit {commit_id[:8]}"
+                if author_email:
+                    recipient_emails.append(author_email)
+                subject_id = f"Commit {commit_id[:8]} authored by {author_name}"
 
         elif pr_id:
-            # Get PR info to extract author email
+            # Get PR info to extract author and reviewers emails
             pr_info = await bitbucket_client.get_pull_request_info(project_key, repo_slug, pr_id)
             if pr_info and pr_info.get("author") and pr_info["author"].get("user"):
                 user_data = pr_info["author"]["user"]
                 author_email = user_data.get("emailAddress")
                 author_name = user_data.get("displayName") or user_data.get("name")
-                subject_id = f"PR #{pr_id}"
+                if author_email:
+                    recipient_emails.append(author_email)
 
-        if not author_email:
-            logger.warning(f"Could not get author email for {subject_id}, skipping email")
-            return False, None, None
+                # Extract reviewer emails
+                reviewers = pr_info.get("reviewers", [])
+                for reviewer in reviewers:
+                    if reviewer.get("user"):
+                        reviewer_email = reviewer["user"].get("emailAddress")
+                        if reviewer_email and reviewer_email not in recipient_emails:
+                            recipient_emails.append(reviewer_email)
+
+                subject_id = f"Pull Request #{pr_id} authored by {author_name}"
+
+        if not recipient_emails:
+            logger.warning(f"Could not get recipient emails for {subject_id}, skipping email")
+            return False, [], None
 
         # Create email subject
         subject = f"{review_type} - {subject_id}"
@@ -100,20 +113,23 @@ async def send_review_email(
         # Format review as HTML
         html_body = format_review_to_html(f"🤖 **{review_type}**\n\n{review}")
 
-        # Send email
+        # Send email to all recipients
+        recipients_str = ", ".join(recipient_emails)
         send_mail(
-            to=author_email,
+            to=recipients_str,
             cc="",  # No CC for now
             subject=subject,
             mailbody=html_body,
         )
 
-        logger.info(f"Sent {review_type.lower()} email for {subject_id} to {author_email}")
-        return True, author_email, author_name
+        logger.info(
+            f"Sent {review_type.lower()} email for {subject_id} to {len(recipient_emails)} recipient(s): {recipients_str}"
+        )
+        return True, recipient_emails, author_name
 
     except Exception as e:
         logger.error(f"Error sending {review_type.lower()} email for {subject_id}: {str(e)}")
-        return False, None, None
+        return False, [], None
 
 
 async def process_pull_request_review(
@@ -164,11 +180,14 @@ async def process_pull_request_review(
 
             # Send review email
             review_type = "AI Code Review (Manual)" if is_manual else "AI Code Review"
-            email_sent, author_email, author_name = await send_review_email(
+            email_sent, recipient_emails, author_name = await send_review_email(
                 bitbucket_client, project_key, repo_slug, review, review_type, pr_id=pr_id
             )
 
             # Save to database
+            # Get author email (first in recipient list, which is always the author)
+            author_email = recipient_emails[0] if recipient_emails else None
+
             await save_review_to_database(
                 review_type="manual" if is_manual else "auto",
                 trigger_type="pull_request",
@@ -179,7 +198,7 @@ async def process_pull_request_review(
                 pr_id=pr_id,
                 author_name=author_name,
                 author_email=author_email,
-                email_recipients=[author_email] if author_email else None,
+                email_recipients=recipient_emails if recipient_emails else None,
                 email_sent=email_sent,
             )
 
@@ -229,11 +248,14 @@ async def process_commit_review(
 
                 # Send review email
                 review_type = "AI Code Review (Manual)" if is_manual else "AI Code Review"
-                email_sent, author_email, author_name = await send_review_email(
+                email_sent, recipient_emails, author_name = await send_review_email(
                     bitbucket_client, project_key, repo_slug, review, review_type, commit_id=commit_id
                 )
 
                 # Save to database
+                # Get author email (first and only in recipient list for commits)
+                author_email = recipient_emails[0] if recipient_emails else None
+
                 await save_review_to_database(
                     review_type="manual" if is_manual else "auto",
                     trigger_type="commit",
@@ -244,7 +266,7 @@ async def process_commit_review(
                     commit_id=commit_id,
                     author_name=author_name,
                     author_email=author_email,
-                    email_recipients=[author_email] if author_email else None,
+                    email_recipients=recipient_emails if recipient_emails else None,
                     email_sent=email_sent,
                 )
 

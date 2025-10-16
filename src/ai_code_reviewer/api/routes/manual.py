@@ -32,11 +32,14 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                     # )
 
                     # Send review email
-                    email_sent, author_email, author_name = await send_review_email(
+                    email_sent, recipient_emails, author_name = await send_review_email(
                         bitbucket_client, project_key, repo_slug, review, "AI Code Review (Manual)", pr_id=pr_id
                     )
 
                     # Save to database
+                    # Get author email (first in recipient list, which is always the author)
+                    author_email = recipient_emails[0] if recipient_emails else None
+
                     record_id = await save_review_to_database(
                         review_type="manual",
                         trigger_type="pull_request",
@@ -47,7 +50,7 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                         pr_id=pr_id,
                         author_name=author_name,
                         author_email=author_email,
-                        email_recipients=[author_email] if author_email else None,
+                        email_recipients=recipient_emails if recipient_emails else None,
                         email_sent=email_sent,
                     )
 
@@ -67,11 +70,14 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                     # )
 
                     # Send review email
-                    email_sent, author_email, author_name = await send_review_email(
+                    email_sent, recipient_emails, author_name = await send_review_email(
                         bitbucket_client, project_key, repo_slug, review, "AI Code Review (Manual)", commit_id=commit_id
                     )
 
                     # Save to database
+                    # Get author email (first and only in recipient list for commits)
+                    author_email = recipient_emails[0] if recipient_emails else None
+
                     record_id = await save_review_to_database(
                         review_type="manual",
                         trigger_type="commit",
@@ -82,7 +88,7 @@ async def manual_review(project_key: str, repo_slug: str, pr_id: int | None = No
                         commit_id=commit_id,
                         author_name=author_name,
                         author_email=author_email,
-                        email_recipients=[author_email] if author_email else None,
+                        email_recipients=recipient_emails if recipient_emails else None,
                         email_sent=email_sent,
                     )
 
