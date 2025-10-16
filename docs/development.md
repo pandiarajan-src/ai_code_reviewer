@@ -5,9 +5,10 @@
 ### Prerequisites
 
 - Python 3.12+
-- uv (Python package manager) or pip
+- uv (Python package manager, recommended) or pip
 - Git
 - Docker and Docker Compose (optional, for containerized development)
+- Pre-commit (optional, for automated code quality checks)
 
 ### Initial Setup
 
@@ -23,7 +24,15 @@
    make install-dev
 
    # Or manually with uv
-   uv sync
+   uv pip install -e ".[dev]"
+
+   # Or with pip
+   pip install -e ".[dev]"
+
+   # Install specific dependency groups
+   pip install -e ".[test]"   # Testing tools only
+   pip install -e ".[lint]"   # Linting tools only
+   pip install -e ".[docker]" # Docker/production extras
    ```
 
 3. **Configure environment**:
@@ -86,6 +95,15 @@ make lint
 ruff check .           # Linting
 black .                # Formatting
 mypy src/              # Type checking
+
+# Security scanning
+make security-check    # Bandit code security scan
+make security-deps     # Safety dependency vulnerability check
+
+# Pre-commit hooks (optional but recommended)
+pre-commit install              # Install git hooks
+pre-commit run --all-files      # Run all checks manually
+make pre-commit-run             # Alternative using Makefile
 ```
 
 ### Docker Development
@@ -183,15 +201,20 @@ pytest tests/unit/test_config.py::test_validate_config -v
 
 ### Updating Dependencies
 
-```bash
-# Add new dependency
-uv add package-name
+Dependencies are managed via `pyproject.toml` with optional groups (dev, test, lint, docker).
 
-# Add dev dependency
-uv add --dev package-name
+```bash
+# Edit pyproject.toml to add dependencies, then:
+uv sync                # Sync all dependencies
+
+# Or with pip (after editing pyproject.toml)
+pip install -e ".[dev]"
 
 # Update all dependencies
 uv sync --upgrade
+
+# Update specific package
+pip install --upgrade package-name
 ```
 
 ### Database Migrations (Future)
@@ -238,11 +261,14 @@ EMAIL_OPTOUT=true  # Disable emails during development
 ## Code Style Guidelines
 
 1. **Follow PEP 8** - Enforced by ruff and black
-2. **Type hints** - Use type annotations for all functions
+2. **Type hints** - Use type annotations for all functions (checked by MyPy)
 3. **Docstrings** - Document public functions and classes
 4. **Line length** - 120 characters maximum
 5. **Imports** - Organized automatically by ruff
 6. **Async/await** - Use for all I/O operations
+7. **Security** - Document exceptions with `#nosec` comments
+8. **Testing** - Maintain 80%+ code coverage
+9. **Configuration** - Use pyproject.toml for all tool configurations
 
 ## Git Workflow
 
@@ -269,10 +295,11 @@ cd src && python main.py  # ❌ Wrong
 
 ### Test Failures
 
-1. Check environment variables are set
-2. Verify dependencies are installed: `uv sync`
+1. Check environment variables are set (copy `.env.example` to `.env`)
+2. Verify dependencies are installed: `uv pip install -e ".[dev]"` or `pip install -e ".[dev]"`
 3. Clear pytest cache: `rm -rf .pytest_cache`
 4. Check for conflicting ports (8000)
+5. Ensure you're running from project root: `python -m ai_code_reviewer.main`
 
 ### Linting Failures
 

@@ -49,6 +49,23 @@ docs/                       # Documentation
 
 ## Key Commands
 
+### Installation
+```bash
+# Install production dependencies (recommended - using uv)
+uv sync --no-dev
+
+# Or install with pip
+pip install -r requirements.txt
+
+# Install development dependencies (includes testing, linting, security tools)
+uv pip install -e ".[dev]"
+# Or: pip install -e ".[dev]"
+
+# Install specific dependency groups
+pip install -e ".[test]"  # Testing only
+pip install -e ".[lint]"  # Linting only
+```
+
 ### Testing
 ```bash
 # Run all tests with coverage
@@ -82,6 +99,14 @@ make lint
 
 # Run linting without auto-fix
 ./scripts/lint.sh --no-fix
+
+# Security scanning (Bandit for code, Safety for dependencies)
+make security-check       # Run Bandit security scan
+make security-deps        # Check dependencies for vulnerabilities
+
+# Pre-commit hooks (optional but recommended)
+pre-commit install        # Install git hooks
+pre-commit run --all-files  # Run all pre-commit checks
 ```
 
 ### Development Server
@@ -165,12 +190,18 @@ Required environment variables are defined in config.py with validation. Key var
 - Comprehensive test runner in `scripts/run_tests.py` that validates all functionality
 - Mock-based testing for external API calls (Bitbucket, LLM providers)
 - Coverage reporting with HTML output in `htmlcov/`
-- Target coverage: 80%+
+- Target coverage: 80%+ (enforced in pytest configuration)
+- Async test support via pytest-asyncio
 
 ## Code Standards
 - Python 3.12+ with type hints
+- Package management: pyproject.toml with setuptools (PEP 517/518)
+- Dependency management: uv (recommended) or pip
 - Formatting: Black (120 char line length)
 - Linting: Ruff with comprehensive rules (configured in pyproject.toml)
 - Type checking: MyPy with gradual typing
+- Security scanning: Bandit (code) and Safety (dependencies)
+- Pre-commit hooks: Available for automated quality checks
 - Async/await for non-blocking operations
 - Structured logging with appropriate log levels
+- Environment configuration: python-dotenv for .env file loading

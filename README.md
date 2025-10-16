@@ -79,8 +79,9 @@ The agent follows a clean layered architecture with webhook-driven workflow:
 
 ### Prerequisites
 
-- Docker and Docker Compose (recommended)
+- Docker and Docker Compose (recommended for production)
 - Python 3.12+ (for local development)
+- uv package manager (recommended) or pip
 - Bitbucket Enterprise Server with admin access
 - OpenAI API key OR local Ollama installation
 - Azure Logic App configured for email sending (or similar email service)
@@ -244,11 +245,22 @@ EMAIL_OPTOUT=false  # Set to true to disable emails for testing
 ### Local Setup
 
 ```bash
-# Install development dependencies
+# Install development dependencies (recommended - using uv)
+uv pip install -e ".[dev]"
+
+# Or using Makefile
 make install-dev
 
-# Or manually with pip
+# Or with pip
 pip install -e ".[dev]"
+
+# Install production dependencies only
+uv sync --no-dev
+# Or: pip install -r requirements.txt
+
+# Install specific dependency groups
+pip install -e ".[test]"  # Testing tools only
+pip install -e ".[lint]"  # Linting tools only
 ```
 
 ### Testing
@@ -275,7 +287,7 @@ pytest tests/ -v --cov=src --cov-report=html
 
 ### Code Quality & Linting
 
-The project includes comprehensive linting tools for code quality:
+The project includes comprehensive linting and security tools for code quality:
 
 ```bash
 # Run comprehensive linting (ruff, black, mypy) with auto-fix
@@ -290,6 +302,14 @@ make lint
 
 # Type checking
 make type-check
+
+# Security scanning
+make security-check       # Run Bandit security scan on code
+make security-deps        # Check dependencies for vulnerabilities with Safety
+
+# Pre-commit hooks (optional but recommended)
+pre-commit install              # Install git hooks
+pre-commit run --all-files      # Run all pre-commit checks manually
 ```
 
 ### Running Locally
@@ -302,12 +322,17 @@ make dev
 # Server will be available at http://localhost:8000
 ```
 
-The linting script uses:
+The development tools include:
 - **Ruff**: Fast Python linter and formatter (replaces flake8, isort)
-- **Black**: Code formatter for consistent style
-- **MyPy**: Static type checking
+- **Black**: Code formatter for consistent style (120 char line length)
+- **MyPy**: Static type checking with gradual typing
+- **Bandit**: Security vulnerability scanner for Python code
+- **Safety**: Dependency vulnerability checker
+- **Pre-commit**: Git hooks for automated quality checks
+- **pytest**: Testing framework with async support
+- **pytest-cov**: Code coverage reporting (80%+ target)
 
-Configuration is centralized in `pyproject.toml`.
+All tool configurations are centralized in `pyproject.toml`.
 
 ## Deployment Options
 
@@ -360,15 +385,20 @@ spec:
 ### Standalone Deployment
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install the package
+pip install -e .
 
-# Run directly
-python main.py
+# Run directly using module syntax (recommended)
+python -m ai_code_reviewer.main
 
-# Or with gunicorn for production
-pip install gunicorn
-gunicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+# Or with environment file
+cp .env.example .env
+# Edit .env with your configuration
+python -m ai_code_reviewer.main
+
+# Production with gunicorn (installed via docker extras)
+pip install -e ".[docker]"
+gunicorn ai_code_reviewer.main:app --host 0.0.0.0 --port 8000 --workers 4 --worker-class uvicorn.workers.UvicornWorker
 ```
 
 ## Monitoring and Troubleshooting
@@ -474,9 +504,21 @@ async def _get_custom_llm_review(self, prompt: str) -> Optional[str]:
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
-4. Run the test suite: `python run_tests.py`
-5. Submit a pull request
+3. Install development dependencies: `uv pip install -e ".[dev]"` or `pip install -e ".[dev]"`
+4. Make your changes
+5. Run the test suite: `make test` or `python scripts/run_tests.py`
+6. Run linting and security checks: `make lint && make security-check`
+7. (Optional) Install pre-commit hooks: `pre-commit install`
+8. Submit a pull request
+
+### Development Standards
+
+- Follow PEP 8 style guide (enforced by Ruff and Black)
+- Add type hints to all functions (checked by MyPy)
+- Write tests for new functionality (maintain 80%+ coverage)
+- Document security exceptions with `#nosec` comments
+- Update documentation for user-facing changes
+- Use async/await for I/O operations
 
 ## License
 

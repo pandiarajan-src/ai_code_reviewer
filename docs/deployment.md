@@ -46,22 +46,27 @@ git clone <repository-url>
 cd ai_code_reviewer
 ```
 
-### 2. Create Virtual Environment
+### 2. Install Dependencies
 
 ```bash
-# Create virtual environment
+# Create and activate virtual environment (optional but recommended)
 python3.12 -m venv venv
-
-# Activate virtual environment
 source venv/bin/activate  # Linux/macOS
 # or
 venv\Scripts\activate     # Windows
 
-# Install production dependencies
+# Install production dependencies (recommended method)
+pip install -e .
+
+# Or install with uv
+uv sync --no-dev
+
+# Or install with requirements.txt
 pip install -r requirements.txt
 
-# For development (includes all dependencies)
-pip install -r requirements-dev.txt
+# For development (includes all test, lint, and security tools)
+pip install -e ".[dev]"
+# Or: uv pip install -e ".[dev]"
 ```
 
 ### 3. Configure Environment
@@ -78,17 +83,24 @@ nano .env
 
 ```bash
 # Run comprehensive test suite
-python run_tests.py
+python scripts/run_tests.py
+
+# Or using Makefile
+make test
 
 # Run specific tests
-pytest tests/test_config.py -v
+pytest tests/unit/test_config.py -v
+pytest tests/integration/test_main.py -v
 ```
 
 ### 5. Start Development Server
 
 ```bash
-# Start the server
-python main.py
+# Start the server using module syntax (recommended)
+python -m ai_code_reviewer.main
+
+# Or using Makefile
+make dev
 
 # Server will be available at http://localhost:8000
 ```
@@ -288,7 +300,8 @@ Type=simple
 User=ai-reviewer
 WorkingDirectory=/opt/ai-code-reviewer
 Environment=PATH=/opt/ai-code-reviewer/venv/bin
-ExecStart=/opt/ai-code-reviewer/venv/bin/python main.py
+EnvironmentFile=/opt/ai-code-reviewer/.env
+ExecStart=/opt/ai-code-reviewer/venv/bin/python -m ai_code_reviewer.main
 Restart=always
 RestartSec=10
 

@@ -30,36 +30,57 @@ This project delivers a complete, production-ready AI-powered code review agent 
 
 ### ✅ Testing & Quality
 - **Comprehensive Test Suite**: Unit tests, integration tests, and end-to-end tests
-- **Test Coverage**: Covers all major components and functionality
-- **Code Quality**: Structured, maintainable, and well-documented code
+- **Test Coverage**: 80%+ coverage enforced via pytest configuration
+- **Code Quality Tools**: Ruff (linting), Black (formatting), MyPy (type checking)
+- **Security Scanning**: Bandit (code security) and Safety (dependency vulnerabilities)
+- **Pre-commit Hooks**: Automated quality checks on git commits
 - **Configuration Validation**: Ensures proper setup before deployment
 
 ## Project Structure
 
 ```
 ai_code_reviewer/
-├── main.py                 # FastAPI application entry point with email system
-├── config.py              # Configuration management
-├── bitbucket_client.py    # Bitbucket API integration
-├── llm_client.py          # LLM provider integration
-├── send_email.py          # Azure Logic Apps email integration
+├── src/ai_code_reviewer/   # Main application package
+│   ├── api/               # FastAPI application layer
+│   │   ├── app.py         # App initialization
+│   │   ├── dependencies.py # Dependency injection
+│   │   └── routes/        # API route handlers
+│   │       ├── health.py  # Health check endpoints
+│   │       ├── webhook.py # Webhook handlers
+│   │       └── manual.py  # Manual review endpoints
+│   ├── core/              # Core business logic
+│   │   ├── config.py      # Configuration management
+│   │   ├── review_engine.py # Review orchestration
+│   │   └── email_formatter.py # Email HTML formatting
+│   ├── clients/           # External API clients
+│   │   ├── bitbucket_client.py # Bitbucket API integration
+│   │   ├── llm_client.py  # LLM provider abstraction
+│   │   └── email_client.py # Email sending via Logic Apps
+│   └── main.py            # Application entry point
+├── tests/                 # Test suite
+│   ├── unit/              # Unit tests
+│   ├── integration/       # Integration tests
+│   ├── fixtures/          # Test fixtures
+│   └── conftest.py        # Shared test configuration
+├── scripts/               # Development tools
+│   ├── lint.sh            # Linting automation
+│   └── run_tests.py       # Test runner
+├── docker/                # Docker configuration
+│   ├── Dockerfile         # Container definition
+│   └── docker-compose.yml # Multi-container orchestration
+├── docs/                  # Documentation
+│   ├── architecture.md    # System architecture
+│   ├── development.md     # Development guide
+│   ├── deployment.md      # Deployment instructions
+│   └── project-summary.md # Project overview
+├── pyproject.toml         # Package configuration and tool settings
 ├── requirements.txt       # Production dependencies
-├── requirements-dev.txt   # Development and test dependencies
-├── Dockerfile            # Container definition
-├── docker-compose.yml    # Multi-service deployment
-├── .env.example          # Environment configuration template
-├── .dockerignore         # Docker build optimization
-├── run_tests.py          # Comprehensive test runner
-├── tests/                # Test suite
-│   ├── __init__.py
-│   ├── conftest.py       # Test configuration and fixtures
-│   ├── test_config.py    # Configuration tests
-│   ├── test_bitbucket_client.py  # Bitbucket client tests
-│   ├── test_llm_client.py        # LLM client tests
-│   └── test_main.py      # Main application tests
-├── README.md             # Comprehensive documentation
-├── DEPLOYMENT.md         # Detailed deployment guide
-└── PROJECT_SUMMARY.md    # This summary document
+├── requirements-dev.txt   # Development dependencies
+├── .env.example           # Environment configuration template
+├── .pre-commit-config.yaml # Pre-commit hooks configuration
+├── Makefile               # Development and deployment commands
+├── README.md              # Comprehensive documentation
+└── CLAUDE.md              # AI assistant guidance
 ```
 
 ## Supported LLM Providers
@@ -80,7 +101,11 @@ ai_code_reviewer/
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
-docker-compose up -d
+docker-compose -f docker/docker-compose.yml up -d
+
+# Or using Makefile
+make docker-build
+make docker-run
 ```
 
 ### 2. Production Deployment
@@ -221,15 +246,21 @@ The project includes a comprehensive test suite covering:
 ## Getting Started
 
 1. **Clone the repository** and navigate to the project directory
-2. **Configure environment** by copying `.env.example` to `.env` and editing values
-3. **Deploy with Docker**: `docker-compose up -d`
-4. **Configure Bitbucket webhooks** pointing to your deployed agent
-5. **Test functionality** with a sample pull request or commit
+2. **Install dependencies**: `uv pip install -e ".[dev]"` or `pip install -e ".[dev]"`
+3. **Configure environment** by copying `.env.example` to `.env` and editing values
+4. **Deploy with Docker**: `make docker-build && make docker-run` or `docker-compose -f docker/docker-compose.yml up -d`
+5. **Configure Bitbucket webhooks** pointing to your deployed agent
+6. **Test functionality** with a sample pull request or commit
 
 ## Support & Documentation
 
 - **README.md**: Comprehensive setup and usage guide
-- **DEPLOYMENT.md**: Detailed deployment instructions for all scenarios
+- **CLAUDE.md**: Project guidance for AI assistants and developers
+- **docs/architecture.md**: System architecture and design
+- **docs/development.md**: Development workflow and guidelines
+- **docs/deployment.md**: Detailed deployment instructions for all scenarios
+- **Makefile**: Quick reference for common commands
+- **pyproject.toml**: Centralized tool configuration
 - **Inline Documentation**: Extensive code comments and docstrings
 - **Test Examples**: Complete test suite demonstrating usage patterns
 
