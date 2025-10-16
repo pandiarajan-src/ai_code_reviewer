@@ -1,6 +1,6 @@
 """Health check endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
@@ -10,60 +10,85 @@ from ai_code_reviewer.core.config import Config
 
 router = APIRouter()
 
+# Version from pyproject.toml
+API_VERSION = "1.0.0"
+
 
 @router.get("/")
 async def root():
-    """Health check endpoint"""
-    return {"message": "AI Code Reviewer is running", "status": "healthy"}
+    """Root endpoint with basic API information"""
+    return {
+        "message": "AI Code Reviewer",
+        "status": "healthy",
+        "version": API_VERSION,
+        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+    }
 
 
 @router.get("/health")
 async def health_check():
     """Basic health check - lightweight for container health checks"""
-    try:
-        # Only validate configuration (no external API calls)
-        Config.validate_config()
-
-        return {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "config": {
-                "bitbucket_url": Config.BITBUCKET_URL,
-                "llm_provider": Config.LLM_PROVIDER,
-                "llm_model": Config.LLM_MODEL,
-            },
-        }
-    except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+    return {
+        "status": "healthy",
+        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+    }
 
 
 @router.get("/health/detailed")
 async def detailed_health_check():
     """Comprehensive health check with external API validation"""
+    health_status = {
+        "status": "healthy",
+        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        "services": {},
+    }
+
+    # Test Bitbucket connection
     try:
-        # Validate configuration
-        Config.validate_config()
-
-        # Get clients
         bitbucket_client = get_bitbucket_client()
-        llm_client = get_llm_client()
-
-        # Test Bitbucket connection
-        bitbucket_status = await bitbucket_client.test_connection()
-
-        # Test LLM connection
-        llm_status = await llm_client.test_connection()
-
-        return {
-            "status": "healthy",
-            "timestamp": datetime.now().isoformat(),
-            "bitbucket": bitbucket_status,
-            "llm": llm_status,
-            "config": {
-                "bitbucket_url": Config.BITBUCKET_URL,
-                "llm_provider": Config.LLM_PROVIDER,
-                "llm_model": Config.LLM_MODEL,
-            },
+        bitbucket_result = await bitbucket_client.test_connection()
+        is_connected = bitbucket_result.get("status") == "connected"
+        health_status["services"]["bitbucket"] = {
+            "status": "healthy" if is_connected else "unhealthy",
+            "url": Config.BITBUCKET_URL,
         }
+        if is_connected:
+            health_status["services"]["bitbucket"]["message"] = bitbucket_result.get("message", "Connection successful")
+        else:
+            health_status["services"]["bitbucket"]["error"] = bitbucket_result.get("message", "Connection failed")
+            health_status["status"] = "degraded"
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        health_status["status"] = "degraded"
+        health_status["services"]["bitbucket"] = {
+            "status": "unhealthy",
+            "url": Config.BITBUCKET_URL,
+            "error": str(e),
+        }
+
+    # Test LLM connection
+    try:
+        llm_client = get_llm_client()
+        llm_result = await llm_client.test_connection()
+        is_connected = llm_result.get("status") == "connected"
+        health_status["services"]["llm"] = {
+            "status": "healthy" if is_connected else "unhealthy",
+            "provider": Config.LLM_PROVIDER,
+        }
+        if is_connected:
+            health_status["services"]["llm"]["message"] = llm_result.get("message", "Connection successful")
+        else:
+            health_status["services"]["llm"]["error"] = llm_result.get("message", "Connection failed")
+            health_status["status"] = "degraded"
+    except Exception as e:
+        health_status["status"] = "degraded"
+        health_status["services"]["llm"] = {
+            "status": "unhealthy",
+            "provider": Config.LLM_PROVIDER,
+            "error": str(e),
+        }
+
+    # Update overall status if any service is unhealthy
+    if any(service.get("status") == "unhealthy" for service in health_status["services"].values()):
+        health_status["status"] = "unhealthy"
+
+    return health_status
