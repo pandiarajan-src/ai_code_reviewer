@@ -11,7 +11,10 @@ class TestConfig:
 
     def test_default_values(self):
         """Test default configuration values"""
-        with patch.dict(os.environ, {}, clear=True):
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("ai_code_reviewer.core.config.load_dotenv"),
+        ):
             # Reload config to pick up defaults
             import importlib
 

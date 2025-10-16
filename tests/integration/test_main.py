@@ -52,8 +52,8 @@ class TestMainApp:
     def test_detailed_health_endpoint_success(self, client):
         """Test detailed health check endpoint success"""
         with (
-            patch("ai_code_reviewer.api.dependencies.get_bitbucket_client") as mock_get_bb,
-            patch("ai_code_reviewer.api.dependencies.get_llm_client") as mock_get_llm,
+            patch("ai_code_reviewer.api.routes.health.get_bitbucket_client") as mock_get_bb,
+            patch("ai_code_reviewer.api.routes.health.get_llm_client") as mock_get_llm,
         ):
             mock_bb = AsyncMock()
             mock_bb.test_connection = AsyncMock(return_value={"status": "connected"})
