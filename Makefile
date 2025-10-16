@@ -1,7 +1,7 @@
 # AI Code Reviewer - Makefile
 # Comprehensive development and deployment commands
 
-.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check clean dev server stop docker-build docker-run docker-stop docker-logs docker-clean health
+.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check security-check security-deps clean dev server stop docker-build docker-run docker-stop docker-logs docker-clean health
 
 # Configuration
 PYTHON := python3
@@ -32,7 +32,7 @@ install: ## Install production dependencies
 
 install-dev: ## Install all dependencies including development tools
 	@echo "📦 Installing development dependencies..."
-	uv sync
+	uv pip install -e ".[dev]"
 	@echo "✅ Development environment ready!"
 
 # Testing targets
@@ -76,6 +76,26 @@ type-check: ## Run type checking with mypy
 	@echo "🔍 Running type checking..."
 	mypy src/ --ignore-missing-imports
 	mypy tests/ --ignore-missing-imports
+	mypy scripts/ --ignore-missing-imports
+
+security-check: ## Run security checks with bandit
+	@echo "🔒 Running security checks with Bandit..."
+	@echo "Note: Known acceptable risks (self-signed certs, Docker binding) are documented in pyproject.toml"
+	@bandit -r src/ -f txt --severity-level medium || true
+	@echo ""
+	@echo "ℹ️  To suppress documented exceptions, use #nosec comments in code"
+	@echo "ℹ️  See pyproject.toml [tool.bandit] for configuration"
+
+security-deps: ## Check dependencies for security vulnerabilities
+	@echo "🔍 Checking dependencies for vulnerabilities with Safety..."
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run safety check 2>&1 | grep -v "DEPRECATED" || echo "⚠️  Vulnerabilities found - review and update dependencies"; \
+	elif command -v safety >/dev/null 2>&1; then \
+		safety check 2>&1 | grep -v "DEPRECATED" || echo "⚠️  Vulnerabilities found - review and update dependencies"; \
+	else \
+		echo "⚠️  Safety not installed. Install with: uv pip install -e \".[dev]\""; \
+		echo "   Or: pip install safety"; \
+	fi
 
 # Development server targets
 dev: ## Start development server with auto-reload

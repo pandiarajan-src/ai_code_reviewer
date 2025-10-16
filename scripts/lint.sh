@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PYTHON_FILES="*.py tests/*.py"
+# Note: We target the entire codebase (.) and rely on pyproject.toml exclusions
 EXCLUDE_DIRS="__pycache__ .pytest_cache htmlcov .git"
 
 echo -e "${BLUE}🔧 AI Code Reviewer - Comprehensive Linting${NC}"
@@ -91,6 +91,28 @@ run_black() {
     fi
 }
 
+# Function to run bandit security checks
+run_bandit() {
+    echo -e "\n${BLUE}🔒 Running Bandit (security checks)...${NC}"
+    echo "------------------------------------------"
+
+    # Check if bandit is installed
+    if ! command_exists bandit; then
+        echo -e "${YELLOW}⚠️  Bandit not installed, skipping security checks${NC}"
+        echo "Install with: pip install bandit"
+        return 0
+    fi
+
+    # Run bandit on source code
+    echo "Bandit: Scanning for security issues in src/..."
+    if bandit -r src/ -f txt --severity-level medium; then
+        echo -e "${GREEN}✅ No security issues found${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Security issues detected - review above${NC}"
+        echo -e "${YELLOW}Note: These are warnings, not errors. Review and fix as appropriate.${NC}"
+    fi
+}
+
 # Function to run mypy type checking
 run_mypy() {
     echo -e "\n${BLUE}🔍 Running MyPy (type checking)...${NC}"
@@ -130,19 +152,26 @@ ignore_missing_imports = True
 EOF
     fi
     
-    # Run mypy on main files and tests
-    echo "MyPy: Checking main application files..."
-    if mypy *.py --ignore-missing-imports; then
-        echo -e "${GREEN}✅ Main files type check passed${NC}"
+    # Run mypy on all Python code directories
+    echo "MyPy: Checking application code (src/)..."
+    if mypy src/ --ignore-missing-imports; then
+        echo -e "${GREEN}✅ Application code type check passed${NC}"
     else
-        echo -e "${YELLOW}⚠️  Main files have type issues${NC}"
+        echo -e "${YELLOW}⚠️  Application code has type issues${NC}"
     fi
-    
-    echo -e "\nMyPy: Checking test files..."
+
+    echo -e "\nMyPy: Checking test files (tests/)..."
     if mypy tests/ --ignore-missing-imports; then
         echo -e "${GREEN}✅ Test files type check passed${NC}"
     else
         echo -e "${YELLOW}⚠️  Test files have type issues${NC}"
+    fi
+
+    echo -e "\nMyPy: Checking scripts (scripts/)..."
+    if mypy scripts/ --ignore-missing-imports; then
+        echo -e "${GREEN}✅ Scripts type check passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Scripts have type issues${NC}"
     fi
 }
 
@@ -214,16 +243,16 @@ main() {
     # Run linting tools
     if $CHECK_ONLY; then
         echo -e "\n${YELLOW}🔍 Running in CHECK-ONLY mode${NC}"
-        
+
         # Check-only mode
         echo -e "\n${BLUE}Checking with Ruff...${NC}"
         ruff check .
-        
+
         echo -e "\n${BLUE}Checking with Black...${NC}"
         black --check --diff .
-        
+
         run_mypy
-        
+
     else
         # Normal mode with fixes
         if $FIX_MODE; then
@@ -242,7 +271,7 @@ main() {
             echo -e "\n${BLUE}🖤 Running Black (check only)...${NC}"
             black --check --diff .
         fi
-        
+
         run_mypy
         show_summary
     fi

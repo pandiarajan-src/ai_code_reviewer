@@ -40,7 +40,9 @@ Here is the diff:
 Please provide your review:"""
 
     # Server configuration
-    HOST = os.getenv("HOST", "0.0.0.0")
+    # nosec B104: Binding to 0.0.0.0 is required for Docker containers to accept external connections
+    # This is standard practice for containerized applications
+    HOST = os.getenv("HOST", "0.0.0.0")  # nosec B104
     PORT = int(os.getenv("PORT", "8000"))
 
     # Logging configuration

@@ -287,3 +287,26 @@ precision = 2
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[tool.bandit]
+# Bandit security scanning configuration
+# Scans src/ directory for security vulnerabilities
+
+exclude_dirs = [
+    "tests/",         # Test code excluded (allows hardcoded test credentials)
+    ".venv/",         # Virtual environment
+    "venv/",          # Alternative virtual environment
+    "htmlcov/",       # Coverage reports
+    "build/",         # Build artifacts
+    "dist/",          # Distribution packages
+]
+
+# Known acceptable security exceptions (documented with #nosec in code):
+# - B104: Binding to 0.0.0.0 is required for Docker containers
+# - B501: SSL verification disabled for enterprise Bitbucket self-signed certificates
+#
+# These are NOT skipped here to ensure they're explicitly documented with #nosec comments.
+# Use #nosec comments in code to suppress on a case-by-case basis.
+
+# Only report medium and high severity issues (ignore low-severity noise)
+severity = "medium"
