@@ -11,11 +11,19 @@ class TestConfig:
 
     def test_default_values(self):
         """Test default configuration values"""
-        assert Config.HOST == "0.0.0.0"
-        assert Config.PORT == 8000
-        assert Config.LOG_LEVEL == "INFO"
-        assert Config.LLM_PROVIDER == "openai"
-        assert Config.LLM_MODEL == "gpt-4o"
+        with patch.dict(os.environ, {}, clear=True):
+            # Reload config to pick up defaults
+            import importlib
+
+            from ai_code_reviewer.core import config
+
+            importlib.reload(config)
+
+            assert config.Config.HOST == "0.0.0.0"
+            assert config.Config.PORT == 8000
+            assert config.Config.LOG_LEVEL == "INFO"
+            assert config.Config.LLM_PROVIDER == "openai"
+            assert config.Config.LLM_MODEL == "gpt-4o"
 
     def test_environment_override(self):
         """Test environment variable override"""
@@ -23,7 +31,7 @@ class TestConfig:
             # Reload config to pick up new environment
             import importlib
 
-            import config
+            from ai_code_reviewer.core import config
 
             importlib.reload(config)
 
@@ -37,7 +45,7 @@ class TestConfig:
         ):
             import importlib
 
-            import config
+            from ai_code_reviewer.core import config
 
             importlib.reload(config)
 
@@ -48,7 +56,7 @@ class TestConfig:
         with patch.dict(os.environ, {"BITBUCKET_TOKEN": ""}, clear=True):
             import importlib
 
-            import config
+            from ai_code_reviewer.core import config
 
             importlib.reload(config)
 
@@ -62,7 +70,7 @@ class TestConfig:
         ):
             import importlib
 
-            import config
+            from ai_code_reviewer.core import config
 
             importlib.reload(config)
 
@@ -74,7 +82,7 @@ class TestConfig:
         with patch.dict(os.environ, {"BITBUCKET_TOKEN": "test_token", "LLM_PROVIDER": "local_ollama"}, clear=True):
             import importlib
 
-            import config
+            from ai_code_reviewer.core import config
 
             importlib.reload(config)
 

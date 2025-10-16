@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -89,7 +89,7 @@ class TestBitbucketClient:
     @pytest.mark.asyncio
     async def test_make_request_success(self, client):
         """Test successful HTTP request"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"test": "data"}
         mock_response.content = b'{"test": "data"}'
@@ -104,7 +104,7 @@ class TestBitbucketClient:
     @pytest.mark.asyncio
     async def test_make_request_error(self, client):
         """Test HTTP request error"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 404
         mock_response.text = "Not Found"
 

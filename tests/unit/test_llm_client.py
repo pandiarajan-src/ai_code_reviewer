@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -16,7 +16,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_test_openai_connection_success(self, client):
         """Test successful OpenAI connection"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"choices": [{"message": {"content": "Hello"}}]}
 
@@ -34,7 +34,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_test_openai_connection_failure(self, client):
         """Test failed OpenAI connection"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 401
         mock_response.text = "Unauthorized"
 
@@ -52,7 +52,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_test_ollama_connection_success(self, client):
         """Test successful Ollama connection"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"models": [{"name": "llama3"}, {"name": "qwen-coder"}]}
 
@@ -79,7 +79,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_test_ollama_connection_model_not_found(self, client):
         """Test Ollama connection with model not found"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"models": [{"name": "llama3"}]}
 
@@ -99,7 +99,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_get_openai_review_success(self, client, sample_diff):
         """Test successful OpenAI code review"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "choices": [{"message": {"content": "The code looks good. No issues found."}}]
@@ -119,7 +119,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_get_openai_review_failure(self, client, sample_diff):
         """Test failed OpenAI code review"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 500
         mock_response.text = "Internal Server Error"
 
@@ -137,7 +137,7 @@ class TestLLMClient:
     @pytest.mark.asyncio
     async def test_get_ollama_review_success(self, client, sample_diff):
         """Test successful Ollama code review"""
-        mock_response = AsyncMock()
+        mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "The code looks good. No issues found."}
 
