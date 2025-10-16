@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ai_code_reviewer.api.routes import health, manual, reviews, webhook
+from ai_code_reviewer.api.routes import failures, health, manual, reviews, webhook
 from ai_code_reviewer.db.database import close_db, init_db
 
 
@@ -50,5 +50,6 @@ def create_app() -> FastAPI:
     app.include_router(webhook.router, tags=["webhook"])
     app.include_router(manual.router, tags=["manual"])
     app.include_router(reviews.router, tags=["reviews"])
+    app.include_router(failures.router, tags=["failures"])
 
     return app

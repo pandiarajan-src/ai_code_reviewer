@@ -5,7 +5,7 @@ import logging
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_code_reviewer.db.models import ReviewRecord
+from ai_code_reviewer.db.models import ReviewFailureLog, ReviewRecord
 
 
 logger = logging.getLogger(__name__)
@@ -162,6 +162,186 @@ class ReviewRepository:
             return count
         except Exception as e:
             logger.error(f"Error counting reviews: {str(e)}")
+            raise
+
+
+class FailureLogRepository:
+    """Repository for failure log operations."""
+
+    def __init__(self, session: AsyncSession):
+        """Initialize repository with database session."""
+        self.session = session
+
+    async def create_failure_log(
+        self,
+        event_type: str,
+        failure_stage: str,
+        error_type: str,
+        error_message: str,
+        event_key: str | None = None,
+        request_payload: dict | None = None,
+        project_key: str | None = None,
+        repo_slug: str | None = None,
+        commit_id: str | None = None,
+        pr_id: int | None = None,
+        author_name: str | None = None,
+        author_email: str | None = None,
+        error_stacktrace: str | None = None,
+        retry_count: int = 0,
+    ) -> ReviewFailureLog:
+        """Create a new failure log record in the database."""
+        try:
+            failure_log = ReviewFailureLog(
+                event_type=event_type,
+                event_key=event_key,
+                request_payload=request_payload,
+                project_key=project_key,
+                repo_slug=repo_slug,
+                commit_id=commit_id,
+                pr_id=pr_id,
+                author_name=author_name,
+                author_email=author_email,
+                failure_stage=failure_stage,
+                error_type=error_type,
+                error_message=error_message,
+                error_stacktrace=error_stacktrace,
+                retry_count=retry_count,
+                resolved=False,
+            )
+
+            self.session.add(failure_log)
+            await self.session.flush()
+            await self.session.refresh(failure_log)
+
+            logger.info(f"Created failure log with ID: {failure_log.id}")
+            return failure_log
+
+        except Exception as e:
+            logger.error(f"Error creating failure log: {str(e)}")
+            raise
+
+    async def get_failure_by_id(self, failure_id: int) -> ReviewFailureLog | None:
+        """Get a failure log by ID."""
+        try:
+            result = await self.session.execute(select(ReviewFailureLog).where(ReviewFailureLog.id == failure_id))
+            record: ReviewFailureLog | None = result.scalar_one_or_none()
+            return record
+        except Exception as e:
+            logger.error(f"Error fetching failure log {failure_id}: {str(e)}")
+            raise
+
+    async def get_unresolved_failures(self, limit: int = 50) -> list[ReviewFailureLog]:
+        """Get unresolved failure logs ordered by creation date."""
+        try:
+            result = await self.session.execute(
+                select(ReviewFailureLog)
+                .where(ReviewFailureLog.resolved == False)  # noqa: E712
+                .order_by(desc(ReviewFailureLog.created_at))
+                .limit(limit)
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching unresolved failures: {str(e)}")
+            raise
+
+    async def get_failures_by_stage(self, failure_stage: str, limit: int = 50) -> list[ReviewFailureLog]:
+        """Get failure logs for a specific failure stage."""
+        try:
+            result = await self.session.execute(
+                select(ReviewFailureLog)
+                .where(ReviewFailureLog.failure_stage == failure_stage)
+                .order_by(desc(ReviewFailureLog.created_at))
+                .limit(limit)
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching failures for stage {failure_stage}: {str(e)}")
+            raise
+
+    async def get_failures_by_project(
+        self, project_key: str, repo_slug: str | None = None, limit: int = 50
+    ) -> list[ReviewFailureLog]:
+        """Get failure logs for a specific project/repository."""
+        try:
+            query = select(ReviewFailureLog).where(ReviewFailureLog.project_key == project_key)
+
+            if repo_slug:
+                query = query.where(ReviewFailureLog.repo_slug == repo_slug)
+
+            query = query.order_by(desc(ReviewFailureLog.created_at)).limit(limit)
+
+            result = await self.session.execute(query)
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching failures for project {project_key}: {str(e)}")
+            raise
+
+    async def get_latest_failures(self, limit: int = 50) -> list[ReviewFailureLog]:
+        """Get the latest N failure logs ordered by creation date."""
+        try:
+            result = await self.session.execute(
+                select(ReviewFailureLog).order_by(desc(ReviewFailureLog.created_at)).limit(limit)
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching latest failures: {str(e)}")
+            raise
+
+    async def get_failures_paginated(self, offset: int = 0, limit: int = 10) -> list[ReviewFailureLog]:
+        """Get failure logs with pagination (offset and limit)."""
+        try:
+            result = await self.session.execute(
+                select(ReviewFailureLog).order_by(desc(ReviewFailureLog.created_at)).offset(offset).limit(limit)
+            )
+            return list(result.scalars().all())
+        except Exception as e:
+            logger.error(f"Error fetching paginated failures: {str(e)}")
+            raise
+
+    async def mark_failure_resolved(self, failure_id: int, resolution_notes: str | None = None) -> ReviewFailureLog:
+        """Mark a failure log as resolved with optional notes."""
+        try:
+            result = await self.session.execute(select(ReviewFailureLog).where(ReviewFailureLog.id == failure_id))
+            failure_log = result.scalar_one()
+
+            failure_log.resolved = True
+            failure_log.resolution_notes = resolution_notes
+
+            await self.session.flush()
+            await self.session.refresh(failure_log)
+
+            logger.info(f"Marked failure log {failure_id} as resolved")
+            return failure_log
+
+        except Exception as e:
+            logger.error(f"Error marking failure {failure_id} as resolved: {str(e)}")
+            raise
+
+    async def count_failures_by_stage(self) -> dict[str, int]:
+        """Get count of failures grouped by stage."""
+        try:
+            result = await self.session.execute(
+                select(ReviewFailureLog.failure_stage, func.count(ReviewFailureLog.id))
+                .group_by(ReviewFailureLog.failure_stage)
+                .order_by(desc(func.count(ReviewFailureLog.id)))
+            )
+            return {row[0]: row[1] for row in result.all()}
+        except Exception as e:
+            logger.error(f"Error counting failures by stage: {str(e)}")
+            raise
+
+    async def count_total_failures(self, unresolved_only: bool = False) -> int:
+        """Get total count of failure logs."""
+        try:
+            query = select(func.count(ReviewFailureLog.id))
+            if unresolved_only:
+                query = query.where(ReviewFailureLog.resolved == False)  # noqa: E712
+
+            result = await self.session.execute(query)
+            count: int = result.scalar_one()
+            return count
+        except Exception as e:
+            logger.error(f"Error counting failures: {str(e)}")
             raise
 
 

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from ai_code_reviewer.api.dependencies import get_bitbucket_client, get_llm_client
 from ai_code_reviewer.core.config import Config
-from ai_code_reviewer.core.review_engine import process_commit_review, process_pull_request_review
+from ai_code_reviewer.core.review_engine import log_review_failure, process_commit_review, process_pull_request_review
 
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,7 @@ def verify_webhook_signature(payload: bytes, signature: str) -> bool:
 async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
     """Handle Bitbucket webhooks for code review"""
     payload = None
+    payload_bytes = None
     try:
         # Get raw payload for signature verification
         payload_bytes = await request.body()
@@ -51,7 +52,21 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
         #     raise HTTPException(status_code=401, detail="Invalid webhook signature")
 
         # Parse JSON payload
-        payload = json.loads(payload_bytes.decode("utf-8"))
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8"))
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON payload in webhook: {str(e)}")
+            # Log webhook parsing failure
+            await log_review_failure(
+                event_type="webhook",
+                event_key="unknown",
+                failure_stage="webhook_parsing",
+                error=e,
+                request_payload={
+                    "raw_body": payload_bytes.decode("utf-8", errors="replace") if payload_bytes else None
+                },
+            )
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
         # Handle BitBucket test connection
         if payload.get("test") is True:
@@ -62,8 +77,19 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
         logger.info(f"Received webhook event: {event_key}")
 
         # Get clients
-        bitbucket_client = get_bitbucket_client()
-        llm_client = get_llm_client()
+        try:
+            bitbucket_client = get_bitbucket_client()
+            llm_client = get_llm_client()
+        except Exception as e:
+            logger.error(f"Error initializing clients: {str(e)}")
+            await log_review_failure(
+                event_type="webhook",
+                event_key=event_key,
+                failure_stage="client_initialization",
+                error=e,
+                request_payload=payload,
+            )
+            raise HTTPException(status_code=500, detail="Failed to initialize clients")
 
         # Handle pull request events
         if event_key in ["pr:opened", "pr:modified", "pr:from_ref_updated"]:
@@ -77,9 +103,17 @@ async def webhook_handler(request: Request, background_tasks: BackgroundTasks):
             logger.info(f"Ignoring event: {event_key}")
 
         return {"status": "accepted", "event": event_key}
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON payload in webhook: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except HTTPException:
+        # Re-raise HTTP exceptions without logging (already logged above)
+        raise
     except Exception as e:
         logger.error(f"Error handling webhook: {str(e)}")
+        # Log unexpected webhook handler errors
+        await log_review_failure(
+            event_type="webhook",
+            event_key=payload.get("eventKey") if payload else "unknown",
+            failure_stage="webhook_handler",
+            error=e,
+            request_payload=payload,
+        )
         raise HTTPException(status_code=500, detail=str(e))

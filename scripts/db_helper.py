@@ -27,8 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_code_reviewer.core.config import Config
 from ai_code_reviewer.db.database import close_db, engine, init_db
-from ai_code_reviewer.db.models import Base, ReviewRecord
-from ai_code_reviewer.db.repository import ReviewRepository
+from ai_code_reviewer.db.models import Base, ReviewFailureLog, ReviewRecord
+from ai_code_reviewer.db.repository import FailureLogRepository, ReviewRepository
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -76,6 +76,7 @@ async def clean_database():
     try:
         logger.info("Cleaning database (removing all records)...")
         async with AsyncSession(engine) as session:
+            await session.execute(delete(ReviewFailureLog))
             await session.execute(delete(ReviewRecord))
             await session.commit()
         logger.info("✅ All records deleted")
@@ -89,24 +90,41 @@ async def show_stats():
     """Show database statistics."""
     try:
         async with AsyncSession(engine) as session:
-            repo = ReviewRepository(session)
-            total = await repo.count_total_reviews()
+            review_repo = ReviewRepository(session)
+            failure_repo = FailureLogRepository(session)
 
-            logger.info("\n" + "=" * 50)
+            total_reviews = await review_repo.count_total_reviews()
+            total_failures = await failure_repo.count_total_failures(unresolved_only=False)
+            unresolved_failures = await failure_repo.count_total_failures(unresolved_only=True)
+
+            logger.info("\n" + "=" * 60)
             logger.info("📊 Database Statistics")
-            logger.info("=" * 50)
-            logger.info(f"Total review records: {total}")
+            logger.info("=" * 60)
+            logger.info(f"Total review records: {total_reviews}")
+            logger.info(f"Total failure logs: {total_failures}")
+            logger.info(f"  - Unresolved: {unresolved_failures}")
+            logger.info(f"  - Resolved: {total_failures - unresolved_failures}")
 
-            if total > 0:
+            if total_reviews > 0:
                 # Get latest reviews
-                latest = await repo.get_latest_reviews(limit=5)
+                latest = await review_repo.get_latest_reviews(limit=5)
                 logger.info(f"\nLatest reviews ({len(latest)}):")
                 for record in latest:
                     logger.info(
                         f"  - ID {record.id}: {record.review_type} {record.trigger_type} "
                         f"({record.project_key}/{record.repo_slug}) at {record.created_at}"
                     )
-            logger.info("=" * 50)
+
+            if unresolved_failures > 0:
+                # Get latest unresolved failures
+                latest_failures = await failure_repo.get_unresolved_failures(limit=5)
+                logger.info(f"\nLatest unresolved failures ({len(latest_failures)}):")
+                for failure in latest_failures:
+                    logger.info(
+                        f"  - ID {failure.id}: {failure.failure_stage} - {failure.error_type} at {failure.created_at}"
+                    )
+
+            logger.info("=" * 60)
     except Exception as e:
         logger.error(f"❌ Error showing stats: {e}")
         raise
@@ -259,6 +277,108 @@ async def list_reviews(limit: int = 10):
         raise
 
 
+async def list_failures(limit: int = 10, unresolved_only: bool = False):
+    """List recent failure logs."""
+    try:
+        async with AsyncSession(engine) as session:
+            repo = FailureLogRepository(session)
+
+            if unresolved_only:
+                failures = await repo.get_unresolved_failures(limit=limit)
+                logger.info(f"\n❌ Latest {limit} unresolved failures:")
+            else:
+                failures = await repo.get_latest_failures(limit=limit)
+                logger.info(f"\n❌ Latest {limit} failures:")
+
+            logger.info("=" * 100)
+            for failure in failures:
+                status = "❌ UNRESOLVED" if not failure.resolved else "✅ RESOLVED"
+                logger.info(
+                    f"ID: {failure.id:4d} | {failure.created_at} | {status} | "
+                    f"{failure.event_type:8s} | {failure.failure_stage}"
+                )
+                logger.info(f"  Error: {failure.error_type} - {failure.error_message[:100]}")
+                if failure.project_key:
+                    location = f"{failure.project_key}/{failure.repo_slug}"
+                    if failure.commit_id:
+                        location += f" (commit: {failure.commit_id[:12]})"
+                    if failure.pr_id:
+                        location += f" (PR #{failure.pr_id})"
+                    logger.info(f"  Location: {location}")
+                if failure.author_email:
+                    logger.info(f"  Author: {failure.author_name} <{failure.author_email}>")
+                if failure.retry_count > 0:
+                    logger.info(f"  Retries: {failure.retry_count}")
+                if failure.resolved and failure.resolution_notes:
+                    logger.info(f"  Resolution: {failure.resolution_notes[:100]}")
+                logger.info("-" * 100)
+    except Exception as e:
+        logger.error(f"❌ Error listing failures: {e}")
+        raise
+
+
+async def show_failure_details(failure_id: int):
+    """Show detailed information about a specific failure log."""
+    try:
+        async with AsyncSession(engine) as session:
+            repo = FailureLogRepository(session)
+            failure = await repo.get_failure_by_id(failure_id)
+
+            if not failure:
+                logger.error(f"❌ Failure log {failure_id} not found")
+                return
+
+            logger.info(f"\n🔍 Failure Log Details (ID: {failure_id})")
+            logger.info("=" * 100)
+            logger.info(f"Created: {failure.created_at}")
+            logger.info(f"Event Type: {failure.event_type}")
+            logger.info(f"Event Key: {failure.event_key}")
+            logger.info(f"Failure Stage: {failure.failure_stage}")
+            logger.info(f"Error Type: {failure.error_type}")
+            logger.info(f"Error Message: {failure.error_message}")
+
+            if failure.project_key:
+                logger.info(f"\nRepository: {failure.project_key}/{failure.repo_slug}")
+            if failure.commit_id:
+                logger.info(f"Commit: {failure.commit_id}")
+            if failure.pr_id:
+                logger.info(f"PR: #{failure.pr_id}")
+            if failure.author_email:
+                logger.info(f"Author: {failure.author_name} <{failure.author_email}>")
+
+            logger.info(f"\nRetry Count: {failure.retry_count}")
+            logger.info(f"Resolved: {'Yes' if failure.resolved else 'No'}")
+            if failure.resolved and failure.resolution_notes:
+                logger.info(f"Resolution Notes: {failure.resolution_notes}")
+
+            if failure.error_stacktrace:
+                logger.info(f"\nStacktrace:\n{failure.error_stacktrace}")
+
+            if failure.request_payload:
+                import json
+
+                logger.info(f"\nRequest Payload:\n{json.dumps(failure.request_payload, indent=2)}")
+
+            logger.info("=" * 100)
+    except Exception as e:
+        logger.error(f"❌ Error showing failure details: {e}")
+        raise
+
+
+async def resolve_failure(failure_id: int, notes: str | None = None):
+    """Mark a failure log as resolved."""
+    try:
+        async with AsyncSession(engine) as session:
+            repo = FailureLogRepository(session)
+            await repo.mark_failure_resolved(failure_id, notes)
+            logger.info(f"✅ Failure log {failure_id} marked as resolved")
+            if notes:
+                logger.info(f"   Resolution notes: {notes}")
+    except Exception as e:
+        logger.error(f"❌ Error resolving failure {failure_id}: {e}")
+        raise
+
+
 async def main():
     """Main entry point for the database helper script."""
     parser = argparse.ArgumentParser(
@@ -283,6 +403,18 @@ Examples:
 
   # List recent reviews
   python scripts/db_helper.py list --limit 20
+
+  # List recent failure logs
+  python scripts/db_helper.py failures --limit 20
+
+  # List only unresolved failures
+  python scripts/db_helper.py failures --unresolved-only
+
+  # Show detailed failure log
+  python scripts/db_helper.py failure 123
+
+  # Mark failure as resolved
+  python scripts/db_helper.py resolve 123 --notes "Fixed by restarting LLM service"
 
   # Backup database
   python scripts/db_helper.py backup
@@ -313,6 +445,20 @@ Examples:
     list_parser = subparsers.add_parser("list", help="List recent reviews")
     list_parser.add_argument("--limit", type=int, default=10, help="Number of reviews to show (default: 10)")
 
+    # List failures command
+    failures_parser = subparsers.add_parser("failures", help="List recent failure logs")
+    failures_parser.add_argument("--limit", type=int, default=10, help="Number of failures to show (default: 10)")
+    failures_parser.add_argument("--unresolved-only", action="store_true", help="Show only unresolved failures")
+
+    # Show failure details command
+    show_failure_parser = subparsers.add_parser("failure", help="Show detailed information about a failure log")
+    show_failure_parser.add_argument("id", type=int, help="Failure log ID")
+
+    # Resolve failure command
+    resolve_parser = subparsers.add_parser("resolve", help="Mark a failure log as resolved")
+    resolve_parser.add_argument("id", type=int, help="Failure log ID")
+    resolve_parser.add_argument("--notes", type=str, help="Resolution notes")
+
     # Backup command
     backup_parser = subparsers.add_parser("backup", help="Backup database (SQLite only)")
     backup_parser.add_argument("--file", type=str, help="Backup file path (default: auto-generated)")
@@ -342,6 +488,12 @@ Examples:
             await seed_test_data()
         elif args.command == "list":
             await list_reviews(limit=args.limit)
+        elif args.command == "failures":
+            await list_failures(limit=args.limit, unresolved_only=args.unresolved_only)
+        elif args.command == "failure":
+            await show_failure_details(args.id)
+        elif args.command == "resolve":
+            await resolve_failure(args.id, args.notes)
         elif args.command == "backup":
             await backup_database(args.file)
         elif args.command == "restore":
