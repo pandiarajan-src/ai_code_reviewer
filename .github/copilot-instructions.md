@@ -71,7 +71,7 @@ Run comprehensive test suite with `python run_tests.py`:
 ### Code Quality
 Use `./lint.sh` for comprehensive code linting:
 - **Ruff**: Fast linting and import sorting with auto-fix
-- **Black**: Code formatting for consistent style  
+- **Black**: Code formatting for consistent style
 - **MyPy**: Static type checking
 - **Config**: Centralized in `pyproject.toml`
 

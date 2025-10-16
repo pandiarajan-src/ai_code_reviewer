@@ -212,7 +212,7 @@ sudo nano /etc/nginx/sites-available/ai-code-reviewer
 server {
     listen 80;
     server_name ai-code-reviewer.yourcompany.com;
-    
+
     location / {
         proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
@@ -869,4 +869,3 @@ gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker
 ```
 
 This deployment guide provides comprehensive instructions for all deployment scenarios. Choose the approach that best fits your infrastructure and security requirements.
-

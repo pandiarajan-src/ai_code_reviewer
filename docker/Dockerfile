@@ -36,4 +36,3 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 # Run the application using Python module syntax
 CMD ["python", "-m", "ai_code_reviewer.main"]
-

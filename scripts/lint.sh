@@ -27,22 +27,22 @@ command_exists() {
 # Function to install missing tools
 install_linting_tools() {
     echo -e "${YELLOW}📦 Installing/updating linting tools...${NC}"
-    
+
     if ! command_exists ruff; then
         echo "Installing ruff..."
         pip install ruff
     fi
-    
+
     if ! command_exists black; then
         echo "Installing black..."
         pip install black
     fi
-    
+
     if ! command_exists mypy; then
         echo "Installing mypy..."
         pip install mypy
     fi
-    
+
     echo -e "${GREEN}✅ All linting tools are available${NC}"
 }
 
@@ -50,7 +50,7 @@ install_linting_tools() {
 run_ruff() {
     echo -e "\n${BLUE}🚀 Running Ruff (linting and fixing)...${NC}"
     echo "------------------------------------------"
-    
+
     # Ruff check with auto-fix
     echo "Ruff: Auto-fixing issues..."
     if ruff check . --fix --show-fixes; then
@@ -61,7 +61,7 @@ run_ruff() {
         ruff check .
         return 1
     fi
-    
+
     # Ruff format (replaces need for isort in many cases)
     echo -e "\nRuff: Formatting imports..."
     if ruff format .; then
@@ -76,7 +76,7 @@ run_ruff() {
 run_black() {
     echo -e "\n${BLUE}🖤 Running Black (code formatting)...${NC}"
     echo "------------------------------------------"
-    
+
     # Check what black would change
     if black --check --diff . 2>/dev/null; then
         echo -e "${GREEN}✅ Code is already properly formatted${NC}"
@@ -117,7 +117,7 @@ run_bandit() {
 run_mypy() {
     echo -e "\n${BLUE}🔍 Running MyPy (type checking)...${NC}"
     echo "------------------------------------------"
-    
+
     # Create mypy config if it doesn't exist
     if [ ! -f "mypy.ini" ] && [ ! -f "pyproject.toml" ]; then
         echo "Creating basic mypy.ini configuration..."
@@ -151,7 +151,7 @@ ignore_missing_imports = True
 ignore_missing_imports = True
 EOF
     fi
-    
+
     # Run mypy on all Python code directories
     echo "MyPy: Checking application code (src/)..."
     if mypy src/ --ignore-missing-imports; then
@@ -179,24 +179,24 @@ EOF
 show_summary() {
     echo -e "\n${BLUE}📊 Linting Summary${NC}"
     echo "=================="
-    
+
     # Check final state
     echo "Final checks:"
-    
+
     # Quick ruff check
     if ruff check . --quiet; then
         echo -e "${GREEN}✅ Ruff: No issues${NC}"
     else
         echo -e "${RED}❌ Ruff: Issues found${NC}"
     fi
-    
+
     # Quick black check
     if black --check . --quiet; then
         echo -e "${GREEN}✅ Black: Code properly formatted${NC}"
     else
         echo -e "${RED}❌ Black: Formatting issues${NC}"
     fi
-    
+
     echo -e "\n${GREEN}🎉 Linting process completed!${NC}"
     echo "Check the output above for any remaining issues."
 }
@@ -206,7 +206,7 @@ main() {
     # Parse command line arguments
     FIX_MODE=true
     CHECK_ONLY=false
-    
+
     while [[ $# -gt 0 ]]; do
         case $1 in
             --check-only)
@@ -236,10 +236,10 @@ main() {
                 ;;
         esac
     done
-    
+
     # Install tools if needed
     install_linting_tools
-    
+
     # Run linting tools
     if $CHECK_ONLY; then
         echo -e "\n${YELLOW}🔍 Running in CHECK-ONLY mode${NC}"
@@ -260,14 +260,14 @@ main() {
         else
             echo -e "\n${YELLOW}🔍 Running WITHOUT auto-fix${NC}"
         fi
-        
+
         if $FIX_MODE; then
             run_ruff
             run_black
         else
             echo -e "\n${BLUE}🚀 Running Ruff (check only)...${NC}"
             ruff check .
-            
+
             echo -e "\n${BLUE}🖤 Running Black (check only)...${NC}"
             black --check --diff .
         fi

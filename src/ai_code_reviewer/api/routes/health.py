@@ -1,6 +1,6 @@
 """Health check endpoints."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 
@@ -21,7 +21,7 @@ async def root():
         "message": "AI Code Reviewer",
         "status": "healthy",
         "version": API_VERSION,
-        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        "datetime": datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"),
     }
 
 
@@ -30,7 +30,7 @@ async def health_check():
     """Basic health check - lightweight for container health checks"""
     return {
         "status": "healthy",
-        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        "datetime": datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"),
     }
 
 
@@ -39,7 +39,7 @@ async def detailed_health_check():
     """Comprehensive health check with external API validation"""
     health_status = {
         "status": "healthy",
-        "datetime": datetime.now(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT"),
+        "datetime": datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT"),
         "services": {},
     }
 
