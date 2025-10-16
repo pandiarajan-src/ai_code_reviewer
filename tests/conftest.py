@@ -47,13 +47,60 @@ def mock_llm_client():
 
 @pytest.fixture
 def sample_pr_webhook():
-    """Sample pull request webhook payload"""
+    """Sample pull request webhook payload with correct Bitbucket structure"""
     return {
         "eventKey": "pr:opened",
         "date": "2024-01-01T00:00:00Z",
-        "actor": {"name": "testuser", "emailAddress": "test@example.com"},
-        "repository": {"slug": "test-repo", "project": {"key": "TEST"}},
-        "pullRequest": {"id": 123, "title": "Test PR", "description": "Test pull request"},
+        "actor": {
+            "name": "testuser",
+            "emailAddress": "test@example.com",
+            "active": True,
+            "displayName": "Test User",
+            "id": 1,
+            "slug": "testuser",
+            "type": "NORMAL",
+        },
+        "pullRequest": {
+            "id": 123,
+            "version": 0,
+            "title": "Test PR",
+            "description": "Test pull request",
+            "state": "OPEN",
+            "open": True,
+            "closed": False,
+            "createdDate": 1704067200000,
+            "updatedDate": 1704067200000,
+            "fromRef": {
+                "id": "refs/heads/feature-branch",
+                "displayId": "feature-branch",
+                "latestCommit": "abc123",
+                "repository": {
+                    "slug": "test-repo",
+                    "name": "Test Repository",
+                    "project": {"key": "TEST", "name": "Test Project"},
+                },
+            },
+            "toRef": {
+                "id": "refs/heads/main",
+                "displayId": "main",
+                "latestCommit": "def456",
+                "repository": {
+                    "slug": "test-repo",
+                    "name": "Test Repository",
+                    "project": {"key": "TEST", "name": "Test Project"},
+                },
+            },
+            "locked": False,
+            "author": {
+                "user": {
+                    "name": "testuser",
+                    "emailAddress": "test@example.com",
+                    "displayName": "Test User",
+                }
+            },
+            "reviewers": [],
+            "participants": [],
+        },
     }
 
 

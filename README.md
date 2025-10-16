@@ -668,10 +668,21 @@ async def _get_custom_llm_review(self, prompt: str) -> Optional[str]:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Additional Documentation
+
+For more detailed information:
+
+- **[Architecture Guide](docs/architecture.md)** - System architecture and component design
+- **[Development Guide](docs/development.md)** - Development setup and guidelines
+- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
+- **[Webhook Payloads](docs/webhook-payloads.md)** - Bitbucket webhook payload structures and examples
+- **[Project Summary](docs/project-summary.md)** - High-level project overview
+
 ## Support
 
 For issues and questions:
 1. Check the troubleshooting section above
 2. Review the logs for error messages
-3. Open an issue on the project repository
-4. Contact your system administrator for deployment-specific issues
+3. Consult the documentation in the `docs/` directory
+4. Open an issue on the project repository
+5. Contact your system administrator for deployment-specific issues

@@ -90,10 +90,31 @@ src/ai_code_reviewer/
 2. Handler validates payload and schedules background task
 3. Background task calls `review_engine.py:process_pull_request_review()`
 4. Review engine:
+   - Extracts repository info from `payload.pullRequest.toRef.repository`
+   - Validates payload structure (pullRequest, toRef, repository keys)
    - Fetches PR diff via `bitbucket_client`
    - Sends diff to LLM via `llm_client`
    - Formats review as HTML via `email_formatter`
    - Sends email via `email_client`
+   - Saves review to database
+
+**Note**: For pull requests, repository information is nested in `pullRequest.toRef.repository`, not at the top level. See [webhook-payloads.md](webhook-payloads.md) for detailed payload structure.
+
+### Commit Review Flow
+
+1. Bitbucket sends webhook → `webhook.py:webhook_handler()`
+2. Handler validates payload and schedules background task
+3. Background task calls `review_engine.py:process_commit_review()`
+4. Review engine:
+   - Extracts repository info from `payload.repository` (top level)
+   - Iterates through `payload.changes` array
+   - Fetches commit diff for each change via `bitbucket_client`
+   - Sends diff to LLM via `llm_client`
+   - Formats review as HTML via `email_formatter`
+   - Sends email via `email_client`
+   - Saves review to database
+
+**Note**: For commits, repository information is at the top level of the payload, unlike pull requests. See [webhook-payloads.md](webhook-payloads.md) for comparison.
 
 ### Manual Review Flow
 
@@ -101,7 +122,8 @@ src/ai_code_reviewer/
 2. Endpoint fetches diff (PR or commit) via `bitbucket_client`
 3. Sends diff to LLM via `llm_client`
 4. Formats and sends review email
-5. Returns review result to caller
+5. Saves review to database
+6. Returns review result to caller
 
 ## Design Principles
 

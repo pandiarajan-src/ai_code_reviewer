@@ -121,8 +121,24 @@ async def process_pull_request_review(
 ):
     """Process pull request for AI review"""
     try:
-        repository = payload["repository"]
+        # Validate payload structure
+        if "pullRequest" not in payload:
+            logger.error("Invalid payload: missing 'pullRequest' key")
+            return
+
         pull_request = payload["pullRequest"]
+
+        # Extract repository info from toRef (target branch)
+        if "toRef" not in pull_request:
+            logger.error("Invalid pull request payload: missing 'toRef' key")
+            return
+
+        to_ref = pull_request["toRef"]
+        repository = to_ref.get("repository")
+
+        if not repository:
+            logger.error("Invalid pull request payload: missing 'repository' in toRef")
+            return
 
         project_key = repository["project"]["key"]
         repo_slug = repository["slug"]
