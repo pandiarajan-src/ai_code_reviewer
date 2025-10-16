@@ -43,8 +43,8 @@ ai_code_reviewer/
 ├── bitbucket_client.py    # Bitbucket API integration
 ├── llm_client.py          # LLM provider integration
 ├── send_email.py          # Azure Logic Apps email integration
-├── requirements.txt       # Python dependencies
-├── test_requirements.txt  # Test dependencies
+├── requirements.txt       # Production dependencies
+├── requirements-dev.txt   # Development and test dependencies
 ├── Dockerfile            # Container definition
 ├── docker-compose.yml    # Multi-service deployment
 ├── .env.example          # Environment configuration template

@@ -81,7 +81,7 @@ Test fixtures in `conftest.py` provide mocked clients and sample payloads.
 ```bash
 # Set up environment
 cp .env.example .env  # Edit with test values
-pip install -r requirements.txt -r test_requirements.txt
+pip install -r requirements-dev.txt  # Includes all dependencies
 
 # Run locally
 python main.py  # Starts on localhost:8000
