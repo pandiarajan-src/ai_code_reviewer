@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 COPY .env.example ./.env.example
 COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
+
+# Install the package in editable mode
+RUN pip install --no-cache-dir -e .
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && chown -R app:app /app
