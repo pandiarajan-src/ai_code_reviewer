@@ -65,16 +65,40 @@ async def get_latest_reviews(
 
 
 @router.get("/reviews", response_model=ReviewListResponse)
-async def get_reviews_paginated(
+async def get_reviews_filtered(
     offset: int = Query(default=0, ge=0, description="Starting record number (0-indexed)"),
     limit: int = Query(default=10, ge=1, le=100, description="Number of records to retrieve"),
+    project_key: str | None = Query(default=None, description="Filter by project key"),
+    repo_slug: str | None = Query(default=None, description="Filter by repository slug"),
+    commit_id: str | None = Query(default=None, description="Filter by commit ID"),
+    pr_id: int | None = Query(default=None, description="Filter by pull request ID"),
 ):
-    """Get review records with pagination (offset and limit)."""
+    """Get review records with optional filtering and pagination.
+
+    Returns paginated reviews with optional filters for project, repository, commit, or pull request.
+    Filters can be combined for more specific queries.
+    """
     try:
         async with get_db_session() as session:
             repo = ReviewRepository(session)
-            records = await repo.get_reviews_paginated(offset=offset, limit=limit)
-            total = await repo.count_total_reviews()
+
+            # Get filtered records
+            records = await repo.get_reviews_filtered(
+                offset=offset,
+                limit=limit,
+                project_key=project_key,
+                repo_slug=repo_slug,
+                commit_id=commit_id,
+                pr_id=pr_id,
+            )
+
+            # Get count with same filters
+            total = await repo.count_reviews_filtered(
+                project_key=project_key,
+                repo_slug=repo_slug,
+                commit_id=commit_id,
+                pr_id=pr_id,
+            )
 
             return ReviewListResponse(
                 total=total,
@@ -84,8 +108,30 @@ async def get_reviews_paginated(
             )
 
     except Exception as e:
-        logger.error(f"Error retrieving paginated reviews: {str(e)}")
+        logger.error(f"Error retrieving filtered reviews: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving reviews: {str(e)}")
+
+
+@router.get("/reviews/stats")
+async def get_review_stats():
+    """Get comprehensive review statistics.
+
+    Returns statistics including:
+    - Total review count
+    - Breakdown by review type (auto/manual)
+    - Breakdown by trigger type (commit/pull_request)
+    - Email success rate
+    - Breakdown by LLM provider
+    """
+    try:
+        async with get_db_session() as session:
+            repo = ReviewRepository(session)
+            stats = await repo.get_review_stats()
+            return stats
+
+    except Exception as e:
+        logger.error(f"Error retrieving review stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving stats: {str(e)}")
 
 
 @router.get("/reviews/{review_id}", response_model=ReviewRecordResponse)
@@ -106,69 +152,3 @@ async def get_review_by_id(review_id: int):
     except Exception as e:
         logger.error(f"Error retrieving review {review_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving review: {str(e)}")
-
-
-@router.get("/reviews/project/{project_key}", response_model=list[ReviewRecordResponse])
-async def get_reviews_by_project(
-    project_key: str,
-    repo_slug: str | None = Query(default=None, description="Optional repository slug to filter by"),
-    limit: int = Query(default=10, ge=1, le=100, description="Number of reviews to retrieve"),
-):
-    """Get review records for a specific project/repository."""
-    try:
-        async with get_db_session() as session:
-            repo = ReviewRepository(session)
-            records = await repo.get_reviews_by_project(project_key=project_key, repo_slug=repo_slug, limit=limit)
-
-            return [ReviewRecordResponse.model_validate(record) for record in records]
-
-    except Exception as e:
-        logger.error(f"Error retrieving reviews for project {project_key}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving reviews: {str(e)}")
-
-
-@router.get("/reviews/author/{author_email}", response_model=list[ReviewRecordResponse])
-async def get_reviews_by_author(
-    author_email: str, limit: int = Query(default=10, ge=1, le=100, description="Number of reviews to retrieve")
-):
-    """Get review records for a specific author."""
-    try:
-        async with get_db_session() as session:
-            repo = ReviewRepository(session)
-            records = await repo.get_reviews_by_author(author_email=author_email, limit=limit)
-
-            return [ReviewRecordResponse.model_validate(record) for record in records]
-
-    except Exception as e:
-        logger.error(f"Error retrieving reviews for author {author_email}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving reviews: {str(e)}")
-
-
-@router.get("/reviews/commit/{commit_id}", response_model=list[ReviewRecordResponse])
-async def get_reviews_by_commit(commit_id: str):
-    """Get review records for a specific commit."""
-    try:
-        async with get_db_session() as session:
-            repo = ReviewRepository(session)
-            records = await repo.get_reviews_by_commit(commit_id=commit_id)
-
-            return [ReviewRecordResponse.model_validate(record) for record in records]
-
-    except Exception as e:
-        logger.error(f"Error retrieving reviews for commit {commit_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving reviews: {str(e)}")
-
-
-@router.get("/reviews/pr/{pr_id}", response_model=list[ReviewRecordResponse])
-async def get_reviews_by_pr(pr_id: int):
-    """Get review records for a specific pull request."""
-    try:
-        async with get_db_session() as session:
-            repo = ReviewRepository(session)
-            records = await repo.get_reviews_by_pr(pr_id=pr_id)
-
-            return [ReviewRecordResponse.model_validate(record) for record in records]
-
-    except Exception as e:
-        logger.error(f"Error retrieving reviews for PR {pr_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving reviews: {str(e)}")

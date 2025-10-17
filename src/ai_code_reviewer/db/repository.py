@@ -118,40 +118,64 @@ class ReviewRepository:
             logger.error(f"Error fetching reviews for project {project_key}: {str(e)}")
             raise
 
-    async def get_reviews_by_author(self, author_email: str, limit: int = 10) -> list[ReviewRecord]:
-        """Get review records for a specific author."""
+    async def get_reviews_filtered(
+        self,
+        offset: int = 0,
+        limit: int = 10,
+        project_key: str | None = None,
+        repo_slug: str | None = None,
+        commit_id: str | None = None,
+        pr_id: int | None = None,
+    ) -> list[ReviewRecord]:
+        """Get review records with dynamic filtering and pagination."""
         try:
-            result = await self.session.execute(
-                select(ReviewRecord)
-                .where(ReviewRecord.author_email == author_email)
-                .order_by(desc(ReviewRecord.created_at))
-                .limit(limit)
-            )
+            query = select(ReviewRecord)
+
+            # Apply filters if provided
+            if project_key:
+                query = query.where(ReviewRecord.project_key == project_key)
+            if repo_slug:
+                query = query.where(ReviewRecord.repo_slug == repo_slug)
+            if commit_id:
+                query = query.where(ReviewRecord.commit_id == commit_id)
+            if pr_id:
+                query = query.where(ReviewRecord.pr_id == pr_id)
+
+            # Apply ordering and pagination
+            query = query.order_by(desc(ReviewRecord.created_at)).offset(offset).limit(limit)
+
+            result = await self.session.execute(query)
             return list(result.scalars().all())
         except Exception as e:
-            logger.error(f"Error fetching reviews for author {author_email}: {str(e)}")
+            logger.error(f"Error fetching filtered reviews: {str(e)}")
             raise
 
-    async def get_reviews_by_commit(self, commit_id: str) -> list[ReviewRecord]:
-        """Get review records for a specific commit."""
+    async def count_reviews_filtered(
+        self,
+        project_key: str | None = None,
+        repo_slug: str | None = None,
+        commit_id: str | None = None,
+        pr_id: int | None = None,
+    ) -> int:
+        """Count review records with optional filters."""
         try:
-            result = await self.session.execute(
-                select(ReviewRecord).where(ReviewRecord.commit_id == commit_id).order_by(desc(ReviewRecord.created_at))
-            )
-            return list(result.scalars().all())
-        except Exception as e:
-            logger.error(f"Error fetching reviews for commit {commit_id}: {str(e)}")
-            raise
+            query = select(func.count(ReviewRecord.id))
 
-    async def get_reviews_by_pr(self, pr_id: int) -> list[ReviewRecord]:
-        """Get review records for a specific pull request."""
-        try:
-            result = await self.session.execute(
-                select(ReviewRecord).where(ReviewRecord.pr_id == pr_id).order_by(desc(ReviewRecord.created_at))
-            )
-            return list(result.scalars().all())
+            # Apply filters if provided
+            if project_key:
+                query = query.where(ReviewRecord.project_key == project_key)
+            if repo_slug:
+                query = query.where(ReviewRecord.repo_slug == repo_slug)
+            if commit_id:
+                query = query.where(ReviewRecord.commit_id == commit_id)
+            if pr_id:
+                query = query.where(ReviewRecord.pr_id == pr_id)
+
+            result = await self.session.execute(query)
+            count: int = result.scalar_one()
+            return count
         except Exception as e:
-            logger.error(f"Error fetching reviews for PR {pr_id}: {str(e)}")
+            logger.error(f"Error counting filtered reviews: {str(e)}")
             raise
 
     async def count_total_reviews(self) -> int:
@@ -162,6 +186,51 @@ class ReviewRepository:
             return count
         except Exception as e:
             logger.error(f"Error counting reviews: {str(e)}")
+            raise
+
+    async def get_review_stats(self) -> dict[str, int | float | dict[str, int]]:
+        """Get comprehensive review statistics."""
+        try:
+            # Total count
+            total_result = await self.session.execute(select(func.count(ReviewRecord.id)))
+            total: int = total_result.scalar_one()
+
+            # By review type
+            review_type_result = await self.session.execute(
+                select(ReviewRecord.review_type, func.count(ReviewRecord.id)).group_by(ReviewRecord.review_type)
+            )
+            by_review_type = {row[0]: row[1] for row in review_type_result.all()}
+
+            # By trigger type
+            trigger_type_result = await self.session.execute(
+                select(ReviewRecord.trigger_type, func.count(ReviewRecord.id)).group_by(ReviewRecord.trigger_type)
+            )
+            by_trigger_type = {row[0]: row[1] for row in trigger_type_result.all()}
+
+            # Email success rate
+            email_sent_result = await self.session.execute(
+                select(func.count(ReviewRecord.id)).where(ReviewRecord.email_sent == True)  # noqa: E712
+            )
+            emails_sent: int = email_sent_result.scalar_one()
+            email_success_rate = round((emails_sent / total * 100), 2) if total > 0 else 0.0
+
+            # By LLM provider
+            llm_provider_result = await self.session.execute(
+                select(ReviewRecord.llm_provider, func.count(ReviewRecord.id))
+                .where(ReviewRecord.llm_provider.isnot(None))
+                .group_by(ReviewRecord.llm_provider)
+            )
+            by_llm_provider = {row[0]: row[1] for row in llm_provider_result.all()}
+
+            return {
+                "total_reviews": total,
+                "by_review_type": by_review_type,
+                "by_trigger_type": by_trigger_type,
+                "email_success_rate": email_success_rate,
+                "by_llm_provider": by_llm_provider,
+            }
+        except Exception as e:
+            logger.error(f"Error fetching review stats: {str(e)}")
             raise
 
 

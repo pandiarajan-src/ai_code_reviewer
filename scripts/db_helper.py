@@ -15,7 +15,7 @@ import logging
 import os
 import shutil
 import sys
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -187,7 +187,7 @@ async def seed_test_data():
             for i, data in enumerate(test_records, 1):
                 # Create with staggered timestamps
                 record = ReviewRecord(**data)
-                record.created_at = datetime.now(datetime.UTC) - timedelta(hours=24 - i)  # type: ignore
+                record.created_at = datetime.now(UTC) - timedelta(hours=24 - i)
                 session.add(record)
 
             await session.commit()
