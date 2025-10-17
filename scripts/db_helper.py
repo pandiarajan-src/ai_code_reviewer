@@ -181,18 +181,34 @@ async def seed_test_data():
                 "llm_provider": "local_ollama",
                 "llm_model": "qwen-coder",
             },
+            {
+                "review_type": "manual",
+                "trigger_type": "diff_upload",
+                "project_key": "MANUAL",
+                "repo_slug": "diff-upload",
+                "commit_id": None,
+                "pr_id": None,
+                "author_name": "Alice Developer",
+                "author_email": "alice@example.com",
+                "diff_content": "# Description: Local changes for review\n\ndiff --git a/utils.py b/utils.py\n+def validate_input(data):\n+    if not data:\n+        raise ValueError('Empty data')\n+    return True",
+                "review_feedback": "Good: Added input validation. Consider also checking data type.",
+                "email_recipients": None,
+                "email_sent": False,
+                "llm_provider": "openai",
+                "llm_model": "gpt-4o",
+            },
         ]
 
         async with AsyncSession(engine) as session:
             for i, data in enumerate(test_records, 1):
                 # Create with staggered timestamps
                 record = ReviewRecord(**data)
-                record.created_at = datetime.now(UTC) - timedelta(hours=24 - i)
+                record.created_at = datetime.now(UTC) - timedelta(hours=48 - (i * 10))
                 session.add(record)
 
             await session.commit()
 
-        logger.info(f"✅ Seeded {len(test_records)} test records")
+        logger.info(f"✅ Seeded {len(test_records)} test records (including diff_upload example)")
         await show_stats()
     except Exception as e:
         logger.error(f"❌ Error seeding test data: {e}")
