@@ -415,15 +415,16 @@ The database volume `db_data` persists the SQLite database file at `/app/data/ai
 
 ### Local Setup
 
+**Important**: You must install the package before running the development server.
+
 ```bash
-# Install development dependencies (recommended - using uv)
-uv pip install -e ".[dev]"
+# Complete first-time setup (recommended - installs all dependencies)
+make setup
 
-# Or using Makefile
-make install-dev
-
-# Or with pip
-pip install -e ".[dev]"
+# Or install development dependencies manually
+uv pip install -e ".[dev]"  # Using uv (faster)
+make install-dev             # Using Makefile
+pip install -e ".[dev]"      # Using pip
 
 # Install production dependencies only
 uv sync --no-dev
@@ -432,7 +433,12 @@ uv sync --no-dev
 # Install specific dependency groups
 pip install -e ".[test]"  # Testing tools only
 pip install -e ".[lint]"  # Linting tools only
+
+# Verify installation
+python -c "import ai_code_reviewer" && echo "✅ Package installed successfully"
 ```
+
+**Note**: The `-e` flag installs the package in "editable" mode, which means changes to the source code take effect immediately without reinstalling.
 
 ### Testing
 
@@ -642,6 +648,31 @@ The agent provides comprehensive health checks at `/health`:
 ```
 
 ### Common Issues
+
+#### ModuleNotFoundError when running `make dev`
+
+**Error**: `/usr/bin/python3: Error while finding module specification for 'ai_code_reviewer.api.main' (ModuleNotFoundError: No module named 'ai_code_reviewer')`
+
+**Root Cause**: The package isn't installed in your Python environment.
+
+**Solution**:
+```bash
+# Quick fix - run one of these:
+make setup           # Complete setup (recommended)
+make install-dev     # Install development dependencies
+pip install -e .     # Install in editable mode
+uv pip install -e .  # Install with uv (faster)
+
+# Then run the dev server again:
+make dev
+```
+
+**Verification**: Test if the package is installed:
+```bash
+python -c "import ai_code_reviewer" && echo "✅ Package installed successfully"
+```
+
+**Note**: The Makefile now automatically checks for this and provides helpful error messages if the package isn't installed.
 
 #### Webhook Not Triggering
 - Verify webhook URL is accessible from Bitbucket server

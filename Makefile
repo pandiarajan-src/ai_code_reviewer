@@ -120,7 +120,25 @@ dev: ## Start full-stack development (frontend + backend in parallel)
 dev-backend: ## Start backend API server only
 	@echo "🔧 Starting backend API server..."
 	@echo "API will be available at http://$(SERVER_HOST):$(SERVER_PORT)"
-	$(PYTHON) -m ai_code_reviewer.api.main
+	@# Check if package is installed, if not provide helpful message
+	@if ! $(PYTHON) -c "import ai_code_reviewer" 2>/dev/null; then \
+		echo ""; \
+		echo "❌ Package 'ai_code_reviewer' not found!"; \
+		echo ""; \
+		echo "The package needs to be installed before running the dev server."; \
+		echo ""; \
+		echo "Quick fix - Run one of these commands:"; \
+		echo "  make setup          # Complete setup (recommended for first time)"; \
+		echo "  make install-dev    # Install development dependencies"; \
+		echo "  pip install -e .    # Install in editable mode"; \
+		echo "  uv pip install -e . # Install with uv (faster)"; \
+		echo ""; \
+		echo "After installation, run 'make dev' or 'make dev-backend' again."; \
+		echo ""; \
+		exit 1; \
+	fi
+	@# Set PYTHONPATH to include src directory as fallback
+	PYTHONPATH=$$PYTHONPATH:$(shell pwd)/src $(PYTHON) -m ai_code_reviewer.api.main
 
 dev-frontend: ## Start frontend development server only
 	@echo "🎨 Starting frontend development server..."

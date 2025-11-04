@@ -361,6 +361,18 @@ All 6 test categories passing (100% success rate):
 
 ### Common Issues and Solutions
 
+**Issue: `make dev` fails with "ModuleNotFoundError: No module named 'ai_code_reviewer'"**
+- **Root Cause**: The package hasn't been installed in the Python environment yet
+- **Solution**: Run one of these commands first:
+  ```bash
+  make setup           # Complete first-time setup (recommended)
+  make install-dev     # Install development dependencies
+  pip install -e .     # Install in editable mode
+  uv pip install -e .  # Install with uv (faster)
+  ```
+- **Quick Test**: After installation, verify with `python -c "import ai_code_reviewer"`
+- **Alternative**: The Makefile now checks for this automatically and provides a helpful error message
+
 **Issue: `make test` fails with import errors**
 - **Solution**: Import paths were updated to use `ai_code_reviewer.api.core.*` instead of `ai_code_reviewer.core.*`. Ensure all imports follow the new structure.
 
