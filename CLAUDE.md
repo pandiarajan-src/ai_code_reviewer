@@ -74,19 +74,27 @@ docs/                       # Documentation
 
 ### Installation
 ```bash
-# Install production dependencies (recommended - using uv)
-uv sync --no-dev
+# Install production dependencies AND package (recommended - using uv)
+make install
+# Or manually:
+uv sync --no-dev && uv pip install -e .
 
 # Or install with pip
-pip install -r requirements.txt
+pip install -e .
 
 # Install development dependencies (includes testing, linting, security tools)
+make install-dev
+# Or manually:
 uv pip install -e ".[dev]"
 # Or: pip install -e ".[dev]"
 
 # Install specific dependency groups
 pip install -e ".[test]"  # Testing only
 pip install -e ".[lint]"  # Linting only
+
+# IMPORTANT: The -e flag installs the package in "editable" mode
+# This allows the module to be imported (import ai_code_reviewer)
+# Without -e or uv pip install, only dependencies are installed
 ```
 
 ### Testing
@@ -363,15 +371,18 @@ All 6 test categories passing (100% success rate):
 
 **Issue: `make dev` fails with "ModuleNotFoundError: No module named 'ai_code_reviewer'"**
 - **Root Cause**: The package hasn't been installed in the Python environment yet
-- **Solution**: Run one of these commands first:
+- **Common Mistake**: Running only `uv sync` installs dependencies but NOT the package itself
+- **Solution**: Run one of these commands to install the package:
   ```bash
   make setup           # Complete first-time setup (recommended)
-  make install-dev     # Install development dependencies
-  pip install -e .     # Install in editable mode
+  make install-dev     # Install development dependencies + package
+  make install         # Install production dependencies + package
+  pip install -e .     # Install package in editable mode
   uv pip install -e .  # Install with uv (faster)
   ```
+- **Why `-e` is needed**: Editable mode creates a link so Python can import the module without copying files
 - **Quick Test**: After installation, verify with `python -c "import ai_code_reviewer"`
-- **Alternative**: The Makefile now checks for this automatically and provides a helpful error message
+- **Note**: The Makefile now checks for this automatically and provides a helpful error message
 
 **Issue: `make test` fails with import errors**
 - **Solution**: Import paths were updated to use `ai_code_reviewer.api.core.*` instead of `ai_code_reviewer.core.*`. Ensure all imports follow the new structure.

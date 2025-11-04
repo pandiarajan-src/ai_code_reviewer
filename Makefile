@@ -34,9 +34,12 @@ help: ## Show this help message
 	@echo "  WEBHOOK_SECRET     - Optional webhook signature verification"
 
 # Installation targets
-install: ## Install production dependencies
+install: ## Install production dependencies and package
 	@echo "📦 Installing production dependencies..."
+	@echo "Note: This installs dependencies AND the package itself"
 	uv sync --no-dev
+	uv pip install -e .
+	@echo "✅ Production environment ready!"
 
 install-dev: ## Install all dependencies including development tools
 	@echo "📦 Installing development dependencies..."

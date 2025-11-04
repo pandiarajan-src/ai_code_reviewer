@@ -427,8 +427,10 @@ make install-dev             # Using Makefile
 pip install -e ".[dev]"      # Using pip
 
 # Install production dependencies only
-uv sync --no-dev
-# Or: pip install -r requirements.txt
+make install                 # Installs dependencies + package (recommended)
+# Or manually:
+# uv sync --no-dev && uv pip install -e .
+# pip install -e .
 
 # Install specific dependency groups
 pip install -e ".[test]"  # Testing tools only
@@ -438,7 +440,11 @@ pip install -e ".[lint]"  # Linting tools only
 python -c "import ai_code_reviewer" && echo "✅ Package installed successfully"
 ```
 
-**Note**: The `-e` flag installs the package in "editable" mode, which means changes to the source code take effect immediately without reinstalling.
+**Important Notes**:
+- **The `-e` flag is REQUIRED**: Installs the package in "editable" mode so Python can import it
+- **Common mistake**: Running only `uv sync` installs dependencies but NOT the package itself
+- **Always use `make install` or `pip install -e .`** to ensure the package is importable
+- Changes to source code take effect immediately without reinstalling (editable mode benefit)
 
 ### Testing
 
