@@ -121,6 +121,7 @@ The agent follows a clean layered architecture with webhook-driven workflow:
 
 ### 1. Clone and Configure
 
+**Linux/Mac:**
 ```bash
 git clone <repository-url>
 cd ai_code_reviewer
@@ -129,6 +130,24 @@ cd ai_code_reviewer
 cp .env.example .env
 # Edit .env with your actual configuration
 ```
+
+**Windows:**
+```powershell
+git clone <repository-url>
+cd ai_code_reviewer
+
+# IMPORTANT: Configure Git for proper line endings first!
+git config core.autocrlf input
+
+# Copy and edit environment configuration
+Copy-Item .env.example .env
+# Edit .env with your actual configuration
+
+# Fix line endings for Docker compatibility
+.\scripts\fix-env-windows.ps1 -Fix
+```
+
+> **Windows Users:** If you encounter Docker configuration errors, see the [Windows Setup Guide](WINDOWS_README.md) for troubleshooting.
 
 ### 2. Configure Environment Variables
 

@@ -407,7 +407,7 @@ All 6 test categories passing (100% success rate):
 
 **Issue: Docker container starts but environment variables are not loaded**
 - **Root Cause**: The `.env` file is missing or not being loaded by docker-compose
-- **Solution**:
+- **Solution (Linux/Mac)**:
   ```bash
   # Create .env file from example
   cp .env.example .env
@@ -420,8 +420,41 @@ All 6 test categories passing (100% success rate):
   make docker-build
   make docker-run
   ```
+- **Solution (Windows)**: See detailed guide in [Windows Docker Setup](docs/WINDOWS_DOCKER_SETUP.md)
+  ```powershell
+  # Quick fix for Windows - run this PowerShell script
+  .\scripts\fix-env-windows.ps1 -Fix
+
+  # Or use Windows-specific docker-compose
+  docker-compose -f docker/docker-compose.windows.yml up -d
+  ```
 - **Verification**: Check container logs for your configuration values
   ```bash
   make docker-logs | grep "BITBUCKET_URL\|LLM_PROVIDER"
   ```
 - **Note**: docker-compose.yml now has `env_file: - ../.env` to automatically load environment variables
+
+**Issue: Docker fails on Windows with "Configuration errors: BITBUCKET_TOKEN is required"**
+- **Root Cause**: Windows uses CRLF line endings but Docker containers expect LF line endings
+- **Symptoms**: Container keeps restarting with configuration errors even though `.env` file exists
+- **Quick Fix**:
+  ```powershell
+  # Run the automated fix script
+  .\scripts\fix-env-windows.ps1 -Fix
+  ```
+- **Manual Fix in VS Code**:
+  1. Open `.env` file
+  2. Click "CRLF" in bottom right corner
+  3. Select "LF"
+  4. Save file
+  5. Rebuild container
+- **Manual Fix in PowerShell**:
+  ```powershell
+  # Convert CRLF to LF
+  (Get-Content .env -Raw) -replace "`r`n", "`n" | Set-Content .env -NoNewline
+  ```
+- **Prevention**: Configure Git to use LF line endings
+  ```bash
+  git config --global core.autocrlf input
+  ```
+- **Detailed Guide**: See [Windows Docker Setup Guide](docs/WINDOWS_DOCKER_SETUP.md) for comprehensive troubleshooting
