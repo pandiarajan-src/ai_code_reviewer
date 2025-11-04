@@ -160,17 +160,37 @@ EMAIL_OPTOUT=false
 
 ### 3. Deploy with Docker
 
+**Important**: Ensure your `.env` file is created and configured before running Docker!
+
 ```bash
-# For OpenAI/Cloud LLM
+# Verify .env exists and has your configuration
+cat .env | grep BITBUCKET_URL
+
+# Build the Docker image
+make docker-build
+
+# Start the container (automatically loads .env file)
+make docker-run
+# Or for local LLM with Ollama:
+make docker-run-local
+
+# Verify it's running
+make docker-logs
+
+# Check health
+curl http://localhost:8000/health
+```
+
+**Alternative (without Make):**
+```bash
+# Build and start
 docker-compose -f docker/docker-compose.yml up -d
 
 # For local LLM with Ollama
 docker-compose -f docker/docker-compose.yml --profile local-llm up -d
-
-# Or use Makefile (recommended)
-make docker-build
-make docker-run
 ```
+
+**Note**: The docker-compose.yml now includes `env_file: - ../.env` which automatically loads environment variables from your `.env` file.
 
 ### 4. Configure Bitbucket Webhooks
 

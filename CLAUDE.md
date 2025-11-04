@@ -209,6 +209,10 @@ cd src/ai_code_reviewer/api/frontend && npm run dev
 
 ### Docker
 ```bash
+# IMPORTANT: Create .env file first!
+cp .env.example .env
+# Edit .env with your configuration
+
 # Build and run with Docker Compose (includes frontend + backend)
 docker-compose -f docker/docker-compose.yml up -d
 
@@ -224,9 +228,9 @@ docker-compose -f docker/docker-compose.yml down
 # Remove including volumes (CAUTION: deletes database)
 docker-compose -f docker/docker-compose.yml down -v
 
-# Using Makefile (recommended)
+# Using Makefile (recommended - checks for .env automatically)
 make docker-build
-make docker-run
+make docker-run      # Warns if .env is missing
 make docker-logs
 
 # Access the application:
@@ -235,10 +239,12 @@ make docker-logs
 # - API docs: http://localhost:8000/docs
 
 # Notes:
+# - .env file is automatically loaded by docker-compose (env_file directive)
 # - Database is stored in persistent volume 'db_data' at /app/data/ai_code_reviewer.db
 # - Frontend is served by nginx on port 3000
 # - Backend runs on uvicorn on port 8000
 # - Both processes managed by supervisor in single container
+# - make docker-run will warn if .env file is missing
 ```
 
 ## Architecture
@@ -398,3 +404,24 @@ All 6 test categories passing (100% success rate):
 
 **Issue: ESLint can't find configuration file**
 - **Solution**: Ensure `.eslintrc.cjs` exists in the frontend directory. The file is now included in the repository.
+
+**Issue: Docker container starts but environment variables are not loaded**
+- **Root Cause**: The `.env` file is missing or not being loaded by docker-compose
+- **Solution**:
+  ```bash
+  # Create .env file from example
+  cp .env.example .env
+
+  # Edit with your configuration
+  vim .env  # or nano, code, etc.
+
+  # Rebuild and restart
+  make docker-stop
+  make docker-build
+  make docker-run
+  ```
+- **Verification**: Check container logs for your configuration values
+  ```bash
+  make docker-logs | grep "BITBUCKET_URL\|LLM_PROVIDER"
+  ```
+- **Note**: docker-compose.yml now has `env_file: - ../.env` to automatically load environment variables

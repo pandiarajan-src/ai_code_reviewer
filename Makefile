@@ -178,13 +178,42 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run application in Docker container
 	@echo "🐳 Starting Docker container..."
+	@# Check if .env file exists
+	@if [ ! -f .env ]; then \
+		echo ""; \
+		echo "⚠️  WARNING: .env file not found!"; \
+		echo ""; \
+		echo "Docker Compose will use default values or fail if required variables are missing."; \
+		echo ""; \
+		echo "To fix this:"; \
+		echo "  1. Copy the example file: cp .env.example .env"; \
+		echo "  2. Edit .env with your configuration"; \
+		echo "  3. Run 'make docker-run' again"; \
+		echo ""; \
+		echo "Press Ctrl+C to cancel or wait 5 seconds to continue anyway..."; \
+		sleep 5; \
+	fi
 	docker-compose -f docker/docker-compose.yml up -d
 	@echo "✅ Container started! Check status with 'make docker-logs'"
+	@echo "📝 Logs: make docker-logs"
+	@echo "🏥 Health: curl http://localhost:8000/health"
 
 docker-run-local: ## Run with local Ollama LLM
 	@echo "🐳 Starting with local Ollama LLM..."
+	@# Check if .env file exists
+	@if [ ! -f .env ]; then \
+		echo ""; \
+		echo "⚠️  WARNING: .env file not found!"; \
+		echo ""; \
+		echo "Creating .env with local Ollama settings..."; \
+		cp .env.example .env; \
+		echo "✅ Created .env file. Please edit it with your configuration."; \
+		echo ""; \
+	fi
 	docker-compose -f docker/docker-compose.yml --profile local-llm up -d
 	@echo "✅ Container with local LLM started!"
+	@echo "📝 Logs: make docker-logs"
+	@echo "🦙 Ollama logs: make docker-logs-ollama"
 
 docker-stop: ## Stop Docker containers
 	@echo "🛑 Stopping Docker containers..."
