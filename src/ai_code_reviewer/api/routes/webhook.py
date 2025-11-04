@@ -9,9 +9,13 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
 
+from ai_code_reviewer.api.core.config import Config
+from ai_code_reviewer.api.core.review_engine import (
+    log_review_failure,
+    process_commit_review,
+    process_pull_request_review,
+)
 from ai_code_reviewer.api.dependencies import get_bitbucket_client, get_llm_client
-from ai_code_reviewer.core.config import Config
-from ai_code_reviewer.core.review_engine import log_review_failure, process_commit_review, process_pull_request_review
 
 
 logger = logging.getLogger(__name__)

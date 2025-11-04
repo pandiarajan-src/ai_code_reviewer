@@ -78,6 +78,7 @@ dev = [
     "ruff>=0.1.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
+    "types-requests>=2.31.0",  # Type stubs for requests library
 
     # Additional development tools
     "pre-commit>=3.0.0",
@@ -97,6 +98,7 @@ lint = [
     "ruff>=0.1.0",
     "black>=23.0.0",
     "mypy>=1.0.0",
+    "types-requests>=2.31.0",  # Type stubs for requests library
     "bandit>=1.7.0",
 ]
 
@@ -114,7 +116,7 @@ Repository = "https://github.com/your-org/ai-code-reviewer.git"
 Issues = "https://github.com/your-org/ai-code-reviewer/issues"
 
 [project.scripts]
-ai-code-reviewer = "ai_code_reviewer.main:main"
+ai-code-reviewer = "ai_code_reviewer.api.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -6,7 +6,7 @@ import uvicorn
 from dotenv import load_dotenv
 
 from ai_code_reviewer.api.app import create_app
-from ai_code_reviewer.core.config import Config
+from ai_code_reviewer.api.core.config import Config
 
 
 # Load environment variables BEFORE importing config-dependent modules
@@ -31,9 +31,9 @@ def main():
 
         # Start the server
         uvicorn.run(
-            "ai_code_reviewer.main:app",
+            "ai_code_reviewer.api.main:app",
             host=Config.HOST,
-            port=Config.PORT,
+            port=Config.BACKEND_PORT,
             reload=False,
             log_level=Config.LOG_LEVEL.lower(),
         )

@@ -59,7 +59,8 @@ def setup_test_environment():
         "LLM_MODEL": "gpt-4o",
         "WEBHOOK_SECRET": "test_secret",
         "HOST": "0.0.0.0",
-        "PORT": "8000",
+        "BACKEND_PORT": "8000",
+        "FRONTEND_PORT": "3000",
         "LOG_LEVEL": "INFO",
     }
 
@@ -136,7 +137,7 @@ def test_configuration_validation():
     print("=" * 60)
 
     try:
-        from ai_code_reviewer.core.config import Config
+        from ai_code_reviewer.api.core.config import Config
 
         # Test basic config import and validation with test environment
         # Detailed validation tests are in unit tests
@@ -164,7 +165,7 @@ async def test_api_endpoints():
     try:
         from fastapi.testclient import TestClient
 
-        from ai_code_reviewer.main import app
+        from ai_code_reviewer.api.main import app
 
         client = TestClient(app)
 
@@ -214,13 +215,13 @@ def test_client_modules():
 
     try:
         # Test Bitbucket client import
-        from ai_code_reviewer.clients.bitbucket_client import BitbucketClient
+        from ai_code_reviewer.api.clients.bitbucket_client import BitbucketClient
 
         BitbucketClient()
         print("✅ Bitbucket client import - PASSED")
 
         # Test LLM client import
-        from ai_code_reviewer.clients.llm_client import LLMClient
+        from ai_code_reviewer.api.clients.llm_client import LLMClient
 
         LLMClient()
         print("✅ LLM client import - PASSED")

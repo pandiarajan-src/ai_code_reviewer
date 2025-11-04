@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from ai_code_reviewer.api.core.review_engine import log_review_failure, save_review_to_database, send_review_email
 from ai_code_reviewer.api.dependencies import get_bitbucket_client, get_llm_client
-from ai_code_reviewer.core.review_engine import log_review_failure, save_review_to_database, send_review_email
 
 
 logger = logging.getLogger(__name__)

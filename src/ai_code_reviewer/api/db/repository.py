@@ -5,7 +5,7 @@ import logging
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_code_reviewer.db.models import ReviewFailureLog, ReviewRecord
+from ai_code_reviewer.api.db.models import ReviewFailureLog, ReviewRecord
 
 
 logger = logging.getLogger(__name__)

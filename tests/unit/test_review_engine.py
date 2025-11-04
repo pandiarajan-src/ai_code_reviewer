@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from ai_code_reviewer.core.review_engine import process_commit_review, process_pull_request_review
+from ai_code_reviewer.api.core.review_engine import process_commit_review, process_pull_request_review
 
 
 class TestPullRequestPayloadParsing:
@@ -23,8 +23,8 @@ class TestPullRequestPayloadParsing:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review with issues")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch("ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock),
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -100,8 +100,8 @@ class TestPullRequestPayloadParsing:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch("ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock),
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -126,8 +126,8 @@ class TestPullRequestPayloadParsing:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch("ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock),
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -179,8 +179,8 @@ class TestCommitPayloadParsing:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review with issues")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch("ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock),
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -240,8 +240,8 @@ class TestCommitPayloadParsing:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch("ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock),
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -294,8 +294,10 @@ class TestManualReviewFlag:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock) as mock_save,
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch(
+                "ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock
+            ) as mock_save,
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -322,8 +324,10 @@ class TestManualReviewFlag:
         mock_llm.get_code_review = AsyncMock(return_value="Mock review")
 
         with (
-            patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
-            patch("ai_code_reviewer.core.review_engine.save_review_to_database", new_callable=AsyncMock) as mock_save,
+            patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send,
+            patch(
+                "ai_code_reviewer.api.core.review_engine.save_review_to_database", new_callable=AsyncMock
+            ) as mock_save,
         ):
             mock_send.return_value = (True, "test@example.com", "Test User")
 
@@ -350,7 +354,7 @@ class TestNoIssuesHandling:
         mock_llm = AsyncMock()
         mock_llm.get_code_review = AsyncMock(return_value="No issues found.")
 
-        with patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
+        with patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
             await process_pull_request_review(mock_bb, mock_llm, sample_pr_webhook)
 
             # Should not send email when no issues found
@@ -365,7 +369,7 @@ class TestNoIssuesHandling:
         mock_llm = AsyncMock()
         mock_llm.get_code_review = AsyncMock(return_value="No issues found.")
 
-        with patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
+        with patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
             await process_commit_review(mock_bb, mock_llm, sample_commit_webhook)
 
             # Should not send email when no issues found

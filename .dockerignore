@@ -62,11 +62,11 @@ logs/
 .gitlab-ci.yml
 .travis.yml
 
-# Docker
-docker/
-Dockerfile
-docker-compose.yml
-.dockerignore
+# Docker - exclude build-related files but keep config files
+docker/logs/
+docker/Dockerfile
+docker/docker-compose.yml
+docker/.dockerignore
 
 # Makefile
 Makefile

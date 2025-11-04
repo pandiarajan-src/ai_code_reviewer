@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from ai_code_reviewer.core.config import Config
-from ai_code_reviewer.db.models import Base
+from ai_code_reviewer.api.core.config import Config
+from ai_code_reviewer.api.db.models import Base
 
 
 logger = logging.getLogger(__name__)

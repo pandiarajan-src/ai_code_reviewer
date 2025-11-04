@@ -4,13 +4,13 @@ import logging
 import traceback
 from typing import Any
 
-from ai_code_reviewer.clients.bitbucket_client import BitbucketClient
-from ai_code_reviewer.clients.email_client import send_mail
-from ai_code_reviewer.clients.llm_client import LLMClient
-from ai_code_reviewer.core.config import Config
-from ai_code_reviewer.core.email_formatter import format_review_to_html
-from ai_code_reviewer.db.database import get_db_session
-from ai_code_reviewer.db.repository import FailureLogRepository, ReviewRepository
+from ai_code_reviewer.api.clients.bitbucket_client import BitbucketClient
+from ai_code_reviewer.api.clients.email_client import send_mail
+from ai_code_reviewer.api.clients.llm_client import LLMClient
+from ai_code_reviewer.api.core.config import Config
+from ai_code_reviewer.api.core.email_formatter import format_review_to_html
+from ai_code_reviewer.api.db.database import get_db_session
+from ai_code_reviewer.api.db.repository import FailureLogRepository, ReviewRepository
 
 
 logger = logging.getLogger(__name__)

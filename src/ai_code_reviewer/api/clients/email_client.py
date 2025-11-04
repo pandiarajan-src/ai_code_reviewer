@@ -21,7 +21,7 @@ import logging
 
 import requests
 
-from ai_code_reviewer.core.config import Config
+from ai_code_reviewer.api.core.config import Config
 
 
 logger = logging.getLogger(__name__)

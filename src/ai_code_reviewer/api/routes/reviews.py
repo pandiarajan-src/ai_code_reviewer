@@ -6,8 +6,8 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ai_code_reviewer.db.database import get_db_session
-from ai_code_reviewer.db.repository import ReviewRepository
+from ai_code_reviewer.api.db.database import get_db_session
+from ai_code_reviewer.api.db.repository import ReviewRepository
 
 
 logger = logging.getLogger(__name__)

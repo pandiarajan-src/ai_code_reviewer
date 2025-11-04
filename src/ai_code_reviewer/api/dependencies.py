@@ -1,7 +1,7 @@
 """FastAPI dependency injection."""
 
-from ai_code_reviewer.clients.bitbucket_client import BitbucketClient
-from ai_code_reviewer.clients.llm_client import LLMClient
+from ai_code_reviewer.api.clients.bitbucket_client import BitbucketClient
+from ai_code_reviewer.api.clients.llm_client import LLMClient
 
 
 # Global client instances (initialized once)

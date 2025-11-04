@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from ai_code_reviewer.main import app
+from ai_code_reviewer.api.app import app
 
 
 class TestMainApp:
@@ -41,7 +41,7 @@ class TestMainApp:
 
     def test_health_endpoint_failure(self, client):
         """Test health check endpoint failure"""
-        with patch("ai_code_reviewer.core.config.Config.validate_config", side_effect=ValueError("Config error")):
+        with patch("ai_code_reviewer.api.core.config.Config.validate_config", side_effect=ValueError("Config error")):
             response = client.get("/health")
 
             assert response.status_code == 200
@@ -75,7 +75,7 @@ class TestMainApp:
 
     def test_webhook_pr_opened(self, client, sample_pr_webhook):
         """Test webhook handling for PR opened event"""
-        with patch("ai_code_reviewer.core.review_engine.process_pull_request_review", new_callable=AsyncMock):
+        with patch("ai_code_reviewer.api.core.review_engine.process_pull_request_review", new_callable=AsyncMock):
             response = client.post(
                 "/webhook/code-review", json=sample_pr_webhook, headers={"Content-Type": "application/json"}
             )
@@ -87,7 +87,7 @@ class TestMainApp:
 
     def test_webhook_commit_push(self, client, sample_commit_webhook):
         """Test webhook handling for commit push event"""
-        with patch("ai_code_reviewer.core.review_engine.process_commit_review", new_callable=AsyncMock):
+        with patch("ai_code_reviewer.api.core.review_engine.process_commit_review", new_callable=AsyncMock):
             response = client.post(
                 "/webhook/code-review", json=sample_commit_webhook, headers={"Content-Type": "application/json"}
             )
@@ -116,8 +116,8 @@ class TestMainApp:
         signature = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
 
         with (
-            patch("ai_code_reviewer.core.config.Config.WEBHOOK_SECRET", secret),
-            patch("ai_code_reviewer.core.review_engine.process_pull_request_review", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.config.Config.WEBHOOK_SECRET", secret),
+            patch("ai_code_reviewer.api.core.review_engine.process_pull_request_review", new_callable=AsyncMock),
         ):
             response = client.post(
                 "/webhook/code-review",
@@ -132,7 +132,7 @@ class TestMainApp:
         """Test webhook signature verification failure"""
         payload = json.dumps(sample_pr_webhook).encode()
 
-        with patch("ai_code_reviewer.core.config.Config.WEBHOOK_SECRET", "test_secret"):
+        with patch("ai_code_reviewer.api.core.config.Config.WEBHOOK_SECRET", "test_secret"):
             response = client.post(
                 "/webhook/code-review",
                 content=payload,
@@ -145,8 +145,8 @@ class TestMainApp:
     def test_webhook_no_signature_with_secret(self, client, sample_pr_webhook):
         """Test webhook without signature when secret is configured"""
         with (
-            patch("ai_code_reviewer.core.config.Config.WEBHOOK_SECRET", None),
-            patch("ai_code_reviewer.core.review_engine.process_pull_request_review", new_callable=AsyncMock),
+            patch("ai_code_reviewer.api.core.config.Config.WEBHOOK_SECRET", None),
+            patch("ai_code_reviewer.api.core.review_engine.process_pull_request_review", new_callable=AsyncMock),
         ):
             response = client.post(
                 "/webhook/code-review", json=sample_pr_webhook, headers={"Content-Type": "application/json"}
@@ -262,7 +262,7 @@ class TestMainApp:
     @pytest.mark.asyncio
     async def test_process_pull_request_review(self, sample_pr_webhook):
         """Test pull request review processing from review_engine"""
-        from ai_code_reviewer.core.review_engine import process_pull_request_review
+        from ai_code_reviewer.api.core.review_engine import process_pull_request_review
 
         mock_bb = AsyncMock()
         mock_bb.get_pull_request_diff = AsyncMock(return_value="mock diff")
@@ -273,7 +273,7 @@ class TestMainApp:
         mock_llm = AsyncMock()
         mock_llm.get_code_review = AsyncMock(return_value="Mock review with issues")
 
-        with patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
+        with patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
             mock_send.return_value = True
 
             await process_pull_request_review(mock_bb, mock_llm, sample_pr_webhook)
@@ -285,7 +285,7 @@ class TestMainApp:
     @pytest.mark.asyncio
     async def test_process_pull_request_review_no_issues(self, sample_pr_webhook):
         """Test pull request review processing with no issues found"""
-        from ai_code_reviewer.core.review_engine import process_pull_request_review
+        from ai_code_reviewer.api.core.review_engine import process_pull_request_review
 
         mock_bb = AsyncMock()
         mock_bb.get_pull_request_diff = AsyncMock(return_value="mock diff")
@@ -293,7 +293,7 @@ class TestMainApp:
         mock_llm = AsyncMock()
         mock_llm.get_code_review = AsyncMock(return_value="No issues found.")
 
-        with patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
+        with patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
             await process_pull_request_review(mock_bb, mock_llm, sample_pr_webhook)
 
             # Should not send email when no issues found
@@ -302,7 +302,7 @@ class TestMainApp:
     @pytest.mark.asyncio
     async def test_process_commit_review(self, sample_commit_webhook):
         """Test commit review processing from review_engine"""
-        from ai_code_reviewer.core.review_engine import process_commit_review
+        from ai_code_reviewer.api.core.review_engine import process_commit_review
 
         mock_bb = AsyncMock()
         mock_bb.get_commit_diff = AsyncMock(return_value="mock diff")
@@ -311,7 +311,7 @@ class TestMainApp:
         mock_llm = AsyncMock()
         mock_llm.get_code_review = AsyncMock(return_value="Mock review with issues")
 
-        with patch("ai_code_reviewer.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
+        with patch("ai_code_reviewer.api.core.review_engine.send_review_email", new_callable=AsyncMock) as mock_send:
             mock_send.return_value = True
 
             await process_commit_review(mock_bb, mock_llm, sample_commit_webhook)

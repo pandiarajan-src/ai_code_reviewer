@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 
 
 # Load environment variables from .env file
-# Look for .env in the project root (3 levels up from this file)
-env_path = Path(__file__).parent.parent.parent.parent / ".env"
+# Look for .env in the project root (4 levels up from this file)
+# Path: src/ai_code_reviewer/api/core/config.py -> project root
+env_path = Path(__file__).parent.parent.parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
@@ -52,7 +53,8 @@ Please provide your review:"""
     # nosec B104: Binding to 0.0.0.0 is required for Docker containers to accept external connections
     # This is standard practice for containerized applications
     HOST = os.getenv("HOST", "0.0.0.0")  # nosec B104
-    PORT = int(os.getenv("PORT", "8000"))
+    BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))  # Backend API port
+    FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "3000"))  # Frontend UI port
 
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

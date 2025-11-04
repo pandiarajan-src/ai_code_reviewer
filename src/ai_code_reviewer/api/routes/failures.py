@@ -4,8 +4,8 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from ai_code_reviewer.db.database import get_db_session
-from ai_code_reviewer.db.repository import FailureLogRepository
+from ai_code_reviewer.api.db.database import get_db_session
+from ai_code_reviewer.api.db.repository import FailureLogRepository
 
 
 logger = logging.getLogger(__name__)

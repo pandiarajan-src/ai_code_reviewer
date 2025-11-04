@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from ai_code_reviewer.clients.bitbucket_client import BitbucketClient
+from ai_code_reviewer.api.clients.bitbucket_client import BitbucketClient
 
 
 class TestBitbucketClient:

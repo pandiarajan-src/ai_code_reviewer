@@ -5,8 +5,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from ai_code_reviewer.api.core.config import Config
 from ai_code_reviewer.api.dependencies import get_bitbucket_client, get_llm_client
-from ai_code_reviewer.core.config import Config
 
 
 router = APIRouter()

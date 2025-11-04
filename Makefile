@@ -1,7 +1,7 @@
 # AI Code Reviewer - Makefile
 # Comprehensive development and deployment commands
 
-.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check security-check security-deps clean dev server stop docker-build docker-run docker-stop docker-logs docker-clean health
+.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check security-check security-deps clean dev dev-backend dev-frontend frontend-install frontend-build frontend-lint server stop docker-build docker-run docker-stop docker-logs docker-clean health
 
 # Configuration
 PYTHON := python3
@@ -9,7 +9,9 @@ PIP := pip
 PYTEST := pytest
 COVERAGE_MIN := 80
 SERVER_HOST := 0.0.0.0
-SERVER_PORT := $(shell echo $${PORT:-8000})
+SERVER_PORT := $(shell echo $${BACKEND_PORT:-8000})
+FRONTEND_DIR := src/ai_code_reviewer/api/frontend
+FRONTEND_PORT := 3000
 
 # Load .env file if it exists (for environment variables)
 ifneq (,$(wildcard .env))
@@ -104,17 +106,48 @@ security-deps: ## Check dependencies for security vulnerabilities
 	fi
 
 # Development server targets
-dev: ## Start development server with auto-reload
-	@echo "🚀 Starting development server..."
-	@echo "Server will be available at http://$(SERVER_HOST):$(SERVER_PORT)"
-	@echo "Press Ctrl+C to stop"
-	$(PYTHON) -m ai_code_reviewer.main
+dev: ## Start full-stack development (frontend + backend in parallel)
+	@echo "🚀 Starting full-stack development environment..."
+	@echo "Backend API will be available at http://$(SERVER_HOST):$(SERVER_PORT)"
+	@echo "Frontend UI will be available at http://localhost:$(FRONTEND_PORT)"
+	@echo "Press Ctrl+C to stop both servers"
+	@echo ""
+	@trap 'kill 0' EXIT; \
+	$(MAKE) dev-backend & \
+	$(MAKE) dev-frontend & \
+	wait
+
+dev-backend: ## Start backend API server only
+	@echo "🔧 Starting backend API server..."
+	@echo "API will be available at http://$(SERVER_HOST):$(SERVER_PORT)"
+	$(PYTHON) -m ai_code_reviewer.api.main
+
+dev-frontend: ## Start frontend development server only
+	@echo "🎨 Starting frontend development server..."
+	@echo "UI will be available at http://localhost:$(FRONTEND_PORT)"
+	@cd $(FRONTEND_DIR) && npm run dev
+
+frontend-install: ## Install frontend dependencies
+	@echo "📦 Installing frontend dependencies..."
+	@cd $(FRONTEND_DIR) && npm install
+	@echo "✅ Frontend dependencies installed!"
+
+frontend-build: ## Build frontend for production
+	@echo "🏗️  Building frontend for production..."
+	@cd $(FRONTEND_DIR) && npm run build
+	@echo "✅ Frontend build completed!"
+
+frontend-lint: ## Lint frontend code
+	@echo "🔍 Linting frontend code..."
+	@cd $(FRONTEND_DIR) && npm run lint
 
 server: dev ## Alias for dev command
 
-stop: ## Stop any running Python processes (development server)
-	@echo "🛑 Stopping development server..."
-	@pkill -f "python.*main.py" || echo "No running server found"
+stop: ## Stop any running development servers (frontend and backend)
+	@echo "🛑 Stopping development servers..."
+	@pkill -f "python.*ai_code_reviewer.api.main" || echo "No running backend server found"
+	@pkill -f "vite" || echo "No running frontend server found"
+	@echo "✅ All servers stopped"
 
 # Docker targets
 docker-build: ## Build Docker image
@@ -193,14 +226,19 @@ check: lint-check test-fast ## Quick check - lint and fast tests
 ci: lint test ## Full CI pipeline - lint and test with coverage
 
 # One-command setup for new developers
-setup: install-dev env-example ## Complete setup for new developers
+setup: install-dev frontend-install ## Complete setup for new developers
 	@echo ""
 	@echo "🎉 Setup completed!"
 	@echo ""
 	@echo "Next steps:"
 	@echo "1. Copy .env.example to .env and configure your settings"
-	@echo "2. Run 'make dev' to start the development server"
+	@echo "2. Run 'make dev' to start both frontend and backend servers"
 	@echo "3. Run 'make test' to verify everything works"
+	@echo ""
+	@echo "Available commands:"
+	@echo "  make dev           - Start full-stack (frontend + backend)"
+	@echo "  make dev-backend   - Start backend API only"
+	@echo "  make dev-frontend  - Start frontend UI only"
 	@echo ""
 
 # Release preparation

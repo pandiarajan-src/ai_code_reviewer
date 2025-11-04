@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_code_reviewer.core.config import Config
+from ai_code_reviewer.api.core.config import Config
 
 
 class TestConfig:
@@ -13,32 +13,32 @@ class TestConfig:
         """Test default configuration values"""
         with (
             patch.dict(os.environ, {}, clear=True),
-            patch("ai_code_reviewer.core.config.load_dotenv"),
+            patch("ai_code_reviewer.api.core.config.load_dotenv"),
         ):
             # Reload config to pick up defaults
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 
             assert config.Config.HOST == "0.0.0.0"
-            assert config.Config.PORT == 8000
+            assert config.Config.BACKEND_PORT == 8000
             assert config.Config.LOG_LEVEL == "INFO"
             assert config.Config.LLM_PROVIDER == "openai"
             assert config.Config.LLM_MODEL == "gpt-4o"
 
     def test_environment_override(self):
         """Test environment variable override"""
-        with patch.dict(os.environ, {"PORT": "9000", "LOG_LEVEL": "DEBUG"}):
+        with patch.dict(os.environ, {"BACKEND_PORT": "9000", "LOG_LEVEL": "DEBUG"}):
             # Reload config to pick up new environment
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 
-            assert config.Config.PORT == 9000
+            assert config.Config.BACKEND_PORT == 9000
             assert config.Config.LOG_LEVEL == "DEBUG"
 
     def test_validate_config_success(self):
@@ -48,7 +48,7 @@ class TestConfig:
         ):
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 
@@ -59,7 +59,7 @@ class TestConfig:
         with patch.dict(os.environ, {"BITBUCKET_TOKEN": ""}, clear=True):
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 
@@ -73,7 +73,7 @@ class TestConfig:
         ):
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 
@@ -85,7 +85,7 @@ class TestConfig:
         with patch.dict(os.environ, {"BITBUCKET_TOKEN": "test_token", "LLM_PROVIDER": "local_ollama"}, clear=True):
             import importlib
 
-            from ai_code_reviewer.core import config
+            from ai_code_reviewer.api.core import config
 
             importlib.reload(config)
 

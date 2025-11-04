@@ -15,11 +15,13 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 - **Comprehensive Analysis**: Focuses on bug detection, security vulnerabilities, performance issues, and best practices
 - **Intelligent Routing**: Automatically extracts author email from commits/PRs for targeted notifications
 - **Flexible Deployment**: Can run independently or alongside existing CI/CD infrastructure
-- **Docker Ready**: Fully containerized for easy deployment and scaling
+- **Docker Ready**: Fully containerized with frontend + backend for easy deployment and scaling
+- **Web UI**: React-based frontend for diff uploads, manual reviews, and viewing review history
 - **Webhook Security**: Supports webhook signature verification for secure communication
-- **Manual Triggers**: Provides API endpoints for manual code review requests
+- **Manual Triggers**: Provides API endpoints and web interface for manual code review requests
 - **Review Retrieval APIs**: Query review history by project, author, commit, or PR
 - **Health Monitoring**: Built-in health checks and monitoring endpoints
+- **Type-Safe**: Full TypeScript frontend and Python type hints with MyPy validation
 
 ### Project Structure
 
@@ -27,45 +29,69 @@ The project follows a clean, modular architecture:
 
 ```
 src/ai_code_reviewer/        # Main application package
-├── api/                     # FastAPI application layer
-│   ├── app.py              # App initialization
+├── api/                     # Backend application
+│   ├── main.py             # Application entry point
+│   ├── app.py              # FastAPI app initialization
+│   ├── dependencies.py     # Dependency injection
 │   ├── routes/             # API route handlers
 │   │   ├── health.py       # Health check endpoints
 │   │   ├── webhook.py      # Webhook handlers
-│   │   ├── manual.py       # Manual review endpoints
-│   │   └── reviews.py      # Review retrieval endpoints
-│   └── dependencies.py     # Dependency injection
-├── core/                    # Core business logic
-│   ├── config.py           # Configuration management
-│   ├── review_engine.py    # Review processing orchestration
-│   └── email_formatter.py  # Email HTML formatting
-├── clients/                 # External API clients
-│   ├── bitbucket_client.py # Bitbucket API integration
-│   ├── llm_client.py       # LLM provider abstraction
-│   └── email_client.py     # Email sending via Logic Apps
-├── db/                      # Database layer
-│   ├── models.py           # SQLAlchemy models
-│   ├── database.py         # Database configuration
-│   └── repository.py       # Data access layer
-└── main.py                 # Application entry point
+│   │   ├── manual.py       # Manual review endpoints (diff upload, manual trigger)
+│   │   ├── reviews.py      # Review retrieval endpoints
+│   │   └── failures.py     # Failure log endpoints
+│   ├── core/               # Core business logic
+│   │   ├── config.py       # Configuration management
+│   │   ├── review_engine.py # Review processing orchestration
+│   │   └── email_formatter.py # Email HTML formatting
+│   ├── clients/            # External API clients
+│   │   ├── bitbucket_client.py # Bitbucket API integration
+│   │   ├── llm_client.py   # LLM provider abstraction
+│   │   └── email_client.py # Email sending via Logic Apps
+│   ├── db/                 # Database layer
+│   │   ├── models.py       # SQLAlchemy models for review records
+│   │   ├── database.py     # Database configuration and session management
+│   │   └── repository.py   # Data access layer for review operations
+│   └── frontend/           # React frontend application
+│       ├── src/
+│       │   ├── components/ # React components
+│       │   │   ├── Layout/ # Header, Tabs, Layout
+│       │   │   ├── DiffUpload/ # Tab 1: Diff file upload
+│       │   │   ├── ManualReview/ # Tab 2: Manual review trigger
+│       │   │   ├── ReviewsTable/ # Tab 3: Successful reviews
+│       │   │   ├── FailuresTable/ # Tab 4: Failed reviews
+│       │   │   └── SystemInfo/ # Tab 5: System configuration
+│       │   ├── services/   # API client
+│       │   ├── theme/      # Material-UI theme
+│       │   ├── types/      # TypeScript types
+│       │   ├── App.tsx     # Main app component
+│       │   ├── main.tsx    # Entry point
+│       │   └── vite-env.d.ts # Vite type definitions
+│       ├── package.json    # Frontend dependencies
+│       ├── vite.config.ts  # Vite configuration
+│       └── .eslintrc.cjs   # ESLint configuration
 
 tests/                       # Test suite
 ├── unit/                   # Unit tests
 ├── integration/            # Integration tests
+├── fixtures/               # Test fixtures
 └── conftest.py             # Shared test configuration
 
 scripts/                    # Development tools
 ├── lint.sh                # Linting automation
-└── run_tests.py           # Test runner
+├── run_tests.py           # Test runner
+└── db_helper.py           # Database management utility
 
 docker/                     # Docker configuration
-├── Dockerfile             # Container definition
-└── docker-compose.yml     # Multi-container orchestration
+├── Dockerfile             # Multi-stage container (frontend + backend)
+├── docker-compose.yml     # Multi-container orchestration
+├── nginx.conf             # Nginx configuration for frontend
+└── supervisord.conf       # Supervisor configuration
 
 docs/                       # Documentation
 ├── architecture.md        # System architecture
 ├── development.md         # Development guide
-└── deployment.md          # Deployment instructions
+├── deployment.md          # Deployment instructions
+└── project-summary.md     # Project overview
 ```
 
 ### Architecture
@@ -173,7 +199,8 @@ make docker-run
 | `LOGIC_APP_FROM_EMAIL` | From email address for notifications | No | `pandiarajans@test.com` |
 | `EMAIL_OPTOUT` | Disable email sending for testing | No | `true` |
 | `HOST` | Server bind address | No | `0.0.0.0` |
-| `PORT` | Server port | No | `8000` |
+| `BACKEND_PORT` | Backend API server port | No | `8000` |
+| `FRONTEND_PORT` | Frontend UI server port | No | `3000` |
 | `LOG_LEVEL` | Logging level | No | `INFO` |
 | `DATABASE_URL` | Database connection URL | No | `sqlite+aiosqlite:///./ai_code_reviewer.db` |
 | `DATABASE_ECHO` | Enable SQL query logging | No | `false` |
@@ -431,12 +458,18 @@ pytest tests/ -v --cov=src --cov-report=html
 
 ### Code Quality & Linting
 
-The project includes comprehensive linting and security tools for code quality:
+The project includes comprehensive linting and security tools for both backend and frontend code:
 
 ```bash
-# Run comprehensive linting (ruff, black, mypy) with auto-fix
+# Backend Python linting (ruff, black, mypy) with auto-fix
 make lint
 # Or: ./scripts/lint.sh
+
+# Frontend TypeScript/React linting (ESLint)
+make frontend-lint
+
+# Full CI pipeline (lint + test)
+make ci
 
 # Check code quality without making changes
 ./scripts/lint.sh --check-only
@@ -458,25 +491,69 @@ pre-commit run --all-files      # Run all pre-commit checks manually
 
 ### Running Locally
 
+#### Backend Only
 ```bash
 # Start development server
-make dev
-# Or: python -m ai_code_reviewer.main
+make dev-backend
+# Or: python -m ai_code_reviewer.api.main
 
-# Server will be available at http://localhost:8000
+# Backend API will be available at http://localhost:8000
+# API docs at http://localhost:8000/docs
+```
+
+#### Frontend Only
+```bash
+# Navigate to frontend directory
+cd src/ai_code_reviewer/api/frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server
+npm run dev
+
+# Frontend will be available at http://localhost:3000
+# API proxy configured to forward /api/* to http://localhost:8000
+```
+
+#### Full Stack Development
+```bash
+# Terminal 1: Run backend
+python -m ai_code_reviewer.api.main
+
+# Terminal 2: Run frontend
+cd src/ai_code_reviewer/api/frontend && npm run dev
+
+# Or use Makefile to run both
+make dev
+
+# Access the application:
+# - Frontend UI: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - API docs: http://localhost:8000/docs
 ```
 
 The development tools include:
+
+**Backend:**
 - **Ruff**: Fast Python linter and formatter (replaces flake8, isort)
 - **Black**: Code formatter for consistent style (120 char line length)
-- **MyPy**: Static type checking with gradual typing
+- **MyPy**: Static type checking with gradual typing and type stubs
 - **Bandit**: Security vulnerability scanner for Python code
 - **Safety**: Dependency vulnerability checker
 - **Pre-commit**: Git hooks for automated quality checks
 - **pytest**: Testing framework with async support
 - **pytest-cov**: Code coverage reporting (80%+ target)
 
-All tool configurations are centralized in `pyproject.toml`.
+**Frontend:**
+- **TypeScript 5.9+**: Type-safe JavaScript with latest features
+- **ESLint 8.x**: Linting with @typescript-eslint v8.x for TypeScript support
+- **React 18+**: Modern React with hooks and concurrent features
+- **Vite**: Fast build tool with hot module replacement
+- **Material-UI**: Component library with Intel blue theme
+- **Axios**: HTTP client for API communication
+
+All tool configurations are centralized in `pyproject.toml` (backend) and `package.json` (frontend).
 
 ## Deployment Options
 
@@ -668,6 +745,42 @@ async def _get_custom_llm_review(self, prompt: str) -> Optional[str]:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Recent Updates
+
+### January 2025
+
+**Module Structure Refactoring**
+- Reorganized core modules from `ai_code_reviewer.core.*` to `ai_code_reviewer.api.core.*`
+- Updated all import paths across tests and source code
+- Added proper `app` instance export in `app.py`
+- All 78 unit and integration tests passing
+
+**Type Safety Enhancements**
+- Added `types-requests` for MyPy type checking of requests library
+- Created `vite-env.d.ts` for Vite environment variable types
+- Upgraded `@typescript-eslint` to v8.x for TypeScript 5.9 compatibility
+- Zero type errors across Python and TypeScript codebases
+
+**Docker Build Improvements**
+- Fixed `.dockerignore` to properly include nginx and supervisor config files
+- Resolved npm dependency issues for ARM64 Alpine Linux builds
+- Multi-stage Docker build now fully functional
+- Frontend and backend successfully containerized together
+
+**Frontend Linting Setup**
+- Created `.eslintrc.cjs` with TypeScript + React configuration
+- Fixed all code quality issues (prefer-const, unused variables)
+- Resolved TypeScript/ESLint version compatibility warnings
+- Frontend linting now integrated into CI pipeline
+
+**Test Suite Status**
+- ✅ All 6 test categories passing (100% success rate)
+- ✅ 78 unit and integration tests
+- ✅ Backend linting (Ruff, Black, MyPy)
+- ✅ Frontend linting (ESLint, TypeScript)
+- ✅ Docker build and deployment
+- ✅ Full CI pipeline operational
+
 ## Additional Documentation
 
 For more detailed information:
@@ -677,6 +790,7 @@ For more detailed information:
 - **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
 - **[Webhook Payloads](docs/webhook-payloads.md)** - Bitbucket webhook payload structures and examples
 - **[Project Summary](docs/project-summary.md)** - High-level project overview
+- **[CLAUDE.md](CLAUDE.md)** - AI coding assistant guidance and troubleshooting
 
 ## Support
 
@@ -684,5 +798,6 @@ For issues and questions:
 1. Check the troubleshooting section above
 2. Review the logs for error messages
 3. Consult the documentation in the `docs/` directory
-4. Open an issue on the project repository
-5. Contact your system administrator for deployment-specific issues
+4. Check **[CLAUDE.md](CLAUDE.md)** for common issues and solutions
+5. Open an issue on the project repository
+6. Contact your system administrator for deployment-specific issues

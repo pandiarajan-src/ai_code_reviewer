@@ -279,33 +279,77 @@ EMAIL_OPTOUT=true  # Disable emails during development
 5. Address review feedback
 6. Merge when approved
 
+## Recent Updates (January 2025)
+
+### Module Restructuring
+- Core modules moved from `ai_code_reviewer.core.*` to `ai_code_reviewer.api.core.*`
+- Entry point now at `src/ai_code_reviewer/api/main.py`
+- Run server with: `python -m ai_code_reviewer.api.main`
+- All import paths updated in tests and source code
+
+### Frontend Integration
+- React frontend now integrated at `src/ai_code_reviewer/api/frontend/`
+- Frontend linting with ESLint + TypeScript support
+- Run frontend: `cd src/ai_code_reviewer/api/frontend && npm run dev`
+- Full stack dev: `make dev` (runs both backend and frontend)
+
+### Type Safety Improvements
+- Added `types-requests` for MyPy type checking
+- Created `vite-env.d.ts` for Vite environment types
+- Upgraded `@typescript-eslint` to v8.x for TypeScript 5.9+
+- Zero type errors across Python and TypeScript
+
+### Docker Improvements
+- Multi-stage build with frontend + backend
+- Fixed `.dockerignore` for proper config file inclusion
+- Resolved ARM64 Alpine npm dependency issues
+- Full Docker build now passing
+
 ## Troubleshooting
 
 ### Import Errors
 
-If you see import errors, ensure you're running from the project root:
+**Updated module structure**: Use the new import paths:
 ```bash
-python -m ai_code_reviewer.main
+# Correct - new structure
+python -m ai_code_reviewer.api.main
+from ai_code_reviewer.api.core.config import Config
+
+# Wrong - old structure
+python -m ai_code_reviewer.main  # ❌ Outdated
+from ai_code_reviewer.core.config import Config  # ❌ Outdated
 ```
 
-Not:
-```bash
-cd src && python main.py  # ❌ Wrong
-```
+Ensure you're running from the project root with the new module path.
 
 ### Test Failures
 
 1. Check environment variables are set (copy `.env.example` to `.env`)
 2. Verify dependencies are installed: `uv pip install -e ".[dev]"` or `pip install -e ".[dev]"`
-3. Clear pytest cache: `rm -rf .pytest_cache`
-4. Check for conflicting ports (8000)
-5. Ensure you're running from project root: `python -m ai_code_reviewer.main`
+3. Ensure type stubs installed: Type stubs like `types-requests` are included in dev dependencies
+4. Clear pytest cache: `rm -rf .pytest_cache`
+5. Check for conflicting ports (8000 for backend, 3000 for frontend)
+6. Ensure you're running from project root: `python -m ai_code_reviewer.api.main`
 
 ### Linting Failures
 
-1. Run auto-fix: `./scripts/lint.sh`
+**Backend (Python)**
+1. Run auto-fix: `./scripts/lint.sh` or `make lint`
 2. Check specific issues: `ruff check . --show-fixes`
 3. Format code: `black .`
+4. Type check: `mypy src/ --ignore-missing-imports`
+
+**Frontend (TypeScript)**
+1. Run linting: `make frontend-lint`
+2. Fix issues: `cd src/ai_code_reviewer/api/frontend && npm run lint`
+3. ESLint config at: `src/ai_code_reviewer/api/frontend/.eslintrc.cjs`
+
+### Docker Build Failures
+
+1. Ensure config files exist: `docker/nginx.conf` and `docker/supervisord.conf`
+2. Check `.dockerignore` allows config files but excludes logs
+3. For ARM64 platforms: Use `npm ci` (not `npm ci --only=production`)
+4. Frontend requires all dev dependencies for build: TypeScript, Vite, ESLint
 
 ## Contributing
 

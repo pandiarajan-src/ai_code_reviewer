@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ai_code_reviewer.api.db.database import close_db, init_db
 from ai_code_reviewer.api.routes import failures, health, manual, reviews, webhook
-from ai_code_reviewer.db.database import close_db, init_db
 
 
 logger = logging.getLogger(__name__)
@@ -53,3 +53,7 @@ def create_app() -> FastAPI:
     app.include_router(failures.router, tags=["failures"])
 
     return app
+
+
+# Create application instance
+app = create_app()

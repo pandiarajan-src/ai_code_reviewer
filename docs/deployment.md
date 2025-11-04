@@ -201,7 +201,8 @@ WEBHOOK_SECRET=your_secure_webhook_secret
 
 # Production settings
 HOST=0.0.0.0
-PORT=8000
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
 LOG_LEVEL=INFO
 
 # Email configuration
@@ -367,7 +368,8 @@ data:
   LOGIC_APP_FROM_EMAIL: "noreply@yourcompany.com"
   EMAIL_OPTOUT: "false"
   HOST: "0.0.0.0"
-  PORT: "8000"
+  BACKEND_PORT: "8000"
+  FRONTEND_PORT: "3000"
   LOG_LEVEL: "INFO"
 ```
 

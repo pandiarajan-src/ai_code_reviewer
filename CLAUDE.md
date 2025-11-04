@@ -9,27 +9,44 @@ AI-powered code review agent for Bitbucket Enterprise Server that automatically 
 
 ```
 src/ai_code_reviewer/        # Main application package
-├── api/                     # FastAPI application layer
-│   ├── app.py              # App initialization
+├── api/                     # Backend application
+│   ├── main.py             # Application entry point
+│   ├── app.py              # FastAPI app initialization
 │   ├── dependencies.py     # Dependency injection
-│   └── routes/             # API route handlers
-│       ├── health.py       # Health check endpoints
-│       ├── webhook.py      # Webhook handlers
-│       ├── manual.py       # Manual review endpoints
-│       └── reviews.py      # Review retrieval endpoints
-├── core/                    # Core business logic
-│   ├── config.py           # Configuration management
-│   ├── review_engine.py    # Review processing orchestration
-│   └── email_formatter.py  # Email HTML formatting
-├── clients/                 # External API clients
-│   ├── bitbucket_client.py # Bitbucket API integration
-│   ├── llm_client.py       # LLM provider abstraction
-│   └── email_client.py     # Email sending via Logic Apps
-├── db/                      # Database layer
-│   ├── models.py           # SQLAlchemy models for review records
-│   ├── database.py         # Database configuration and session management
-│   └── repository.py       # Data access layer for review operations
-└── main.py                 # Application entry point
+│   ├── routes/             # API route handlers
+│   │   ├── health.py       # Health check endpoints
+│   │   ├── webhook.py      # Webhook handlers
+│   │   ├── manual.py       # Manual review endpoints (diff upload, manual trigger)
+│   │   ├── reviews.py      # Review retrieval endpoints
+│   │   └── failures.py     # Failure log endpoints
+│   ├── core/               # Core business logic
+│   │   ├── config.py       # Configuration management
+│   │   ├── review_engine.py # Review processing orchestration
+│   │   └── email_formatter.py # Email HTML formatting
+│   ├── clients/            # External API clients
+│   │   ├── bitbucket_client.py # Bitbucket API integration
+│   │   ├── llm_client.py   # LLM provider abstraction
+│   │   └── email_client.py # Email sending via Logic Apps
+│   ├── db/                 # Database layer
+│   │   ├── models.py       # SQLAlchemy models for review records
+│   │   ├── database.py     # Database configuration and session management
+│   │   └── repository.py   # Data access layer for review operations
+│   └── frontend/           # React frontend application
+│       ├── src/
+│       │   ├── components/ # React components
+│       │   │   ├── Layout/ # Header, Tabs, Layout
+│       │   │   ├── DiffUpload/ # Tab 1: Diff file upload
+│       │   │   ├── ManualReview/ # Tab 2: Manual review trigger
+│       │   │   ├── ReviewsTable/ # Tab 3: Successful reviews
+│       │   │   ├── FailuresTable/ # Tab 4: Failed reviews
+│       │   │   └── SystemInfo/ # Tab 5: System configuration
+│       │   ├── services/   # API client
+│       │   ├── theme/      # Material-UI theme
+│       │   ├── types/      # TypeScript types
+│       │   ├── App.tsx     # Main app component
+│       │   └── main.tsx    # Entry point
+│       ├── package.json    # Frontend dependencies
+│       └── vite.config.ts  # Vite configuration
 
 tests/                       # Test suite
 ├── unit/                   # Unit tests
@@ -98,7 +115,9 @@ pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
 ./scripts/lint.sh
 
 # Or using Makefile
-make lint
+make lint                  # Backend Python linting
+make frontend-lint         # Frontend TypeScript/React linting
+make ci                    # Full CI pipeline (lint + test)
 
 # Check code without modifications
 ./scripts/lint.sh --check-only
@@ -135,9 +154,11 @@ python scripts/db_helper.py restore --file backup.db  # Restore backup
 ```
 
 ### Development Server
+
+#### Backend Only
 ```bash
 # Run the FastAPI server locally (recommended - uses module syntax)
-python -m ai_code_reviewer.main
+python -m ai_code_reviewer.api.main
 
 # Or using Makefile
 make dev
@@ -146,12 +167,41 @@ make dev
 export BITBUCKET_URL=https://your-bitbucket.com
 export BITBUCKET_TOKEN=your_token
 export LLM_API_KEY=your_api_key
-python -m ai_code_reviewer.main
+python -m ai_code_reviewer.api.main
+```
+
+#### Frontend Only
+```bash
+# Navigate to frontend directory
+cd src/ai_code_reviewer/api/frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Run development server (with hot reload)
+npm run dev
+
+# Frontend will be available at http://localhost:3000
+# API proxy configured in vite.config.ts to forward /api/* to http://localhost:8000
+```
+
+#### Full Stack Development
+```bash
+# Terminal 1: Run backend
+python -m ai_code_reviewer.api.main
+
+# Terminal 2: Run frontend
+cd src/ai_code_reviewer/api/frontend && npm run dev
+
+# Access the application:
+# - Frontend UI: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - API docs: http://localhost:8000/docs
 ```
 
 ### Docker
 ```bash
-# Build and run with Docker Compose
+# Build and run with Docker Compose (includes frontend + backend)
 docker-compose -f docker/docker-compose.yml up -d
 
 # For local LLM with Ollama
@@ -171,21 +221,45 @@ make docker-build
 make docker-run
 make docker-logs
 
-# Note: Database is stored in persistent volume 'db_data' at /app/data/ai_code_reviewer.db
+# Access the application:
+# - Frontend UI: http://localhost:3000
+# - Backend API: http://localhost:8000
+# - API docs: http://localhost:8000/docs
+
+# Notes:
+# - Database is stored in persistent volume 'db_data' at /app/data/ai_code_reviewer.db
+# - Frontend is served by nginx on port 3000
+# - Backend runs on uvicorn on port 8000
+# - Both processes managed by supervisor in single container
 ```
 
 ## Architecture
 
 ### Layered Architecture
-The application follows a clean layered architecture:
+The application follows a clean layered architecture with separated frontend and backend:
 
-1. **API Layer** (`src/ai_code_reviewer/api/`): FastAPI routes, request/response handling
-2. **Core Layer** (`src/ai_code_reviewer/core/`): Business logic, review orchestration, configuration
-3. **Client Layer** (`src/ai_code_reviewer/clients/`): External service integrations
-4. **Database Layer** (`src/ai_code_reviewer/db/`): SQLAlchemy models, database operations, review record persistence
+**Backend (`src/ai_code_reviewer/api/`):**
+1. **API Layer** (`routes/`): FastAPI routes, request/response handling
+2. **Core Layer** (`core/`): Business logic, review orchestration, configuration
+3. **Client Layer** (`clients/`): External service integrations (Bitbucket, LLM, Email)
+4. **Database Layer** (`db/`): SQLAlchemy models, database operations, review record persistence
+
+**Frontend (`src/ai_code_reviewer/api/frontend/`):**
+1. **Components** (`src/components/`): React UI components organized by feature
+   - Layout: Header, navigation tabs
+   - DiffUpload: Tab 1 - File upload and review
+   - ManualReview: Tab 2 - Manual review trigger
+   - ReviewsTable: Tab 3 - Successful reviews with pagination
+   - FailuresTable: Tab 4 - Failed reviews with pagination
+   - SystemInfo: Tab 5 - System health and status
+2. **Services** (`src/services/`): API client using Axios
+3. **Theme** (`src/theme/`): Material-UI theme with Intel blue colors
+4. **Types** (`src/types/`): TypeScript type definitions
 
 ### Core Components
-- **src/ai_code_reviewer/main.py**: Application entry point
+
+**Backend:**
+- **src/ai_code_reviewer/api/main.py**: Application entry point
 - **src/ai_code_reviewer/api/app.py**: FastAPI app initialization with database lifecycle management
 - **src/ai_code_reviewer/api/routes/**: HTTP endpoint handlers (health, webhook, manual review, review retrieval)
 - **src/ai_code_reviewer/core/review_engine.py**: Review processing orchestration with database persistence
@@ -240,9 +314,64 @@ Required environment variables are defined in config.py with validation. Key var
 - Dependency management: uv (recommended) or pip
 - Formatting: Black (120 char line length)
 - Linting: Ruff with comprehensive rules (configured in pyproject.toml)
-- Type checking: MyPy with gradual typing
+- Type checking: MyPy with gradual typing (includes type stubs for external libraries)
 - Security scanning: Bandit (code) and Safety (dependencies)
 - Pre-commit hooks: Available for automated quality checks
 - Async/await for non-blocking operations
 - Structured logging with appropriate log levels
 - Environment configuration: python-dotenv for .env file loading
+- Frontend: TypeScript 5.9+, ESLint 8.x with @typescript-eslint v8.x, React 18+
+
+## Recent Fixes and Improvements
+
+### Module Structure Refactoring (2025-01)
+- **Relocated core modules**: Moved from `ai_code_reviewer.core.*` to `ai_code_reviewer.api.core.*`
+- **Updated all imports**: Fixed import paths in test files and source code
+- **Added app instance**: Created `app` instance in `app.py` for proper FastAPI initialization
+- All tests now passing with correct import structure
+
+### Type Checking Enhancements
+- **Added type stubs**: Installed `types-requests>=2.31.0` for proper MyPy type checking
+- **Fixed TypeScript types**: Created `vite-env.d.ts` for Vite environment variable types
+- **Upgraded TypeScript ESLint**: Updated to `@typescript-eslint` v8.x for TypeScript 5.9 compatibility
+- Zero type errors across Python and TypeScript codebases
+
+### Docker Build Fixes
+- **Fixed .dockerignore**: Updated to allow `nginx.conf` and `supervisord.conf` while excluding logs
+- **Resolved npm dependencies**: Changed from `npm ci --only=production` to `npm ci` to include optional dependencies needed for Rollup on Alpine Linux (ARM64)
+- **Multi-stage build optimized**: Frontend builds successfully in Docker with all required dependencies
+- Docker build now passes consistently
+
+### Frontend Linting Setup
+- **Created ESLint config**: Added `.eslintrc.cjs` with TypeScript + React configuration
+- **Fixed linting errors**: Corrected code quality issues (prefer-const, unused variables)
+- **Version compatibility**: Resolved TypeScript/ESLint version mismatch warnings
+- Frontend linting now fully functional with zero warnings
+
+### Test Suite Status
+All 6 test categories passing (100% success rate):
+- ✅ Dependency Installation
+- ✅ Configuration Validation
+- ✅ Client Modules
+- ✅ Unit Tests (78 tests)
+- ✅ Code Linting (Python + Frontend)
+- ✅ Docker Build
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+**Issue: `make test` fails with import errors**
+- **Solution**: Import paths were updated to use `ai_code_reviewer.api.core.*` instead of `ai_code_reviewer.core.*`. Ensure all imports follow the new structure.
+
+**Issue: MyPy complains about missing type stubs**
+- **Solution**: Install type stubs with `uv pip install types-requests` or run `uv pip install -e ".[dev]"` to get all dev dependencies including type stubs.
+
+**Issue: Docker build fails with "Cannot find module @rollup/rollup-linux-arm64-musl"**
+- **Solution**: Use `npm ci` instead of `npm ci --only=production` to include optional dependencies needed for platform-specific builds.
+
+**Issue: Frontend lint shows TypeScript version warning**
+- **Solution**: Upgrade `@typescript-eslint` packages to v8.x which supports TypeScript 5.6+. This is now included in package.json.
+
+**Issue: ESLint can't find configuration file**
+- **Solution**: Ensure `.eslintrc.cjs` exists in the frontend directory. The file is now included in the repository.

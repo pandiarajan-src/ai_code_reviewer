@@ -19,3 +19,6 @@ htmlcov/
 .coverage.*
 .cache
 ai_code_reviewer.egg-info/
+src/ai_code_reviewer/api/frontend/node_modules/
+src/ai_code_reviewer/api/frontend/dist/
+src/ai_code_reviewer/api/frontend/build/
