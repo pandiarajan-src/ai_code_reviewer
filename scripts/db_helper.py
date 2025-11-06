@@ -25,10 +25,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_code_reviewer.core.config import Config
-from ai_code_reviewer.db.database import close_db, engine, init_db
-from ai_code_reviewer.db.models import Base, ReviewFailureLog, ReviewRecord
-from ai_code_reviewer.db.repository import FailureLogRepository, ReviewRepository
+from ai_code_reviewer.api.core.config import Config
+from ai_code_reviewer.api.db.database import close_db, engine, init_db
+from ai_code_reviewer.api.db.models import Base, ReviewFailureLog, ReviewRecord
+from ai_code_reviewer.api.db.repository import FailureLogRepository, ReviewRepository
 
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
