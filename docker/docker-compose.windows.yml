@@ -2,6 +2,7 @@ version: '3.8'
 
 # Windows-optimized docker-compose configuration
 # Use this if the standard docker-compose.yml has .env loading issues on Windows
+# Don't include env files in widnows compose file instead send them as docker-compose command line args
 
 services:
   ai-code-reviewer:
@@ -9,8 +10,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     # Windows: Use absolute path or current directory reference
-    env_file:
-      - ../.env
     ports:
       - "${FRONTEND_PORT:-3000}:3000"  # Frontend UI
       - "${BACKEND_PORT:-8000}:8000"   # Backend API
