@@ -171,11 +171,15 @@ stop: ## Stop any running development servers (frontend and backend)
 	@echo "✅ All servers stopped"
 
 # Docker targets
+# Suppose if you are in Windows environment, you need to use the below command
+# docker-compose --env-file .\.env -f docker/docker-windows-compose.yml build
 docker-build: ## Build Docker image
 	@echo "🐳 Building Docker image..."
 	docker build -f docker/Dockerfile -t ai-code-reviewer .
 	@echo "✅ Docker image built successfully!"
 
+# Suppose if you are in Windows environment, you need to use the below command
+# docker-compose --env-file .\.env -f docker/docker-windows-compose.yml up -d
 docker-run: ## Run application in Docker container
 	@echo "🐳 Starting Docker container..."
 	@# Check if .env file exists
