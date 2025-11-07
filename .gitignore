@@ -18,6 +18,9 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+*.patch
+*.bak
+*.diff
 ai_code_reviewer.egg-info/
 src/ai_code_reviewer/api/frontend/node_modules/
 src/ai_code_reviewer/api/frontend/dist/
