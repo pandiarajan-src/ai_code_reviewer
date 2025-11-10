@@ -226,7 +226,8 @@ module = [
     "uvicorn.*",
     "pytest.*",
     "fastapi.*",
-    "pydantic.*"
+    "pydantic.*",
+    "alembic.*"
 ]
 ignore_missing_imports = true
 

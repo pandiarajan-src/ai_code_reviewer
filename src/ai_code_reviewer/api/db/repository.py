@@ -371,7 +371,7 @@ class FailureLogRepository:
         """Mark a failure log as resolved with optional notes."""
         try:
             result = await self.session.execute(select(ReviewFailureLog).where(ReviewFailureLog.id == failure_id))
-            failure_log = result.scalar_one()
+            failure_log: ReviewFailureLog = result.scalar_one()
 
             failure_log.resolved = True
             failure_log.resolution_notes = resolution_notes

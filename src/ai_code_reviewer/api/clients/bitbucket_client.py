@@ -54,7 +54,8 @@ class BitbucketClient:
                 response = await client.request(method=method, url=url, headers=self.headers, **kwargs)
 
                 if response.status_code == 200:
-                    return response.text
+                    result: str = response.text
+                    return result
                 else:
                     logger.error(f"Bitbucket API error: {response.status_code} - {response.text}")
                     return None

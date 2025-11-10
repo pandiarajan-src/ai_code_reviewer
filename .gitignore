@@ -1,27 +1,66 @@
+# Environment and secrets
 .env
+.env.local
+.env.*.local
+
+# Python virtual environments
 .venv/
+venv/
+env/
+
+# Python cache
 .pytest_cache/
 __pycache__/
-.ipynb_checkpoints/
-.vscode/
-.idea/
-.DS_Store
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
-*.log
+.mypy_cache/
+.ruff_cache/
+
+# Testing and coverage
+.coverage
+.coverage.*
 coverage.xml
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
-.cache
+
+# IDEs
+.vscode/
+.idea/
+.ipynb_checkpoints/
+.DS_Store
+
+# Database files (development databases - backups excluded)
+*.db
+*.sqlite
+*.sqlite3
+ai_code_reviewer.db
+data/
+!backups/*.db
+
+# Log files (Docker logs managed by Docker)
+*.log
+logs/*.log
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
 *.patch
 *.bak
 *.diff
-ai_code_reviewer.egg-info/
+
+# Frontend
 src/ai_code_reviewer/api/frontend/node_modules/
 src/ai_code_reviewer/api/frontend/dist/
 src/ai_code_reviewer/api/frontend/build/
+
+# Alembic compiled migrations
+alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# Temporary files
+*.tmp
+*.temp
+.cache

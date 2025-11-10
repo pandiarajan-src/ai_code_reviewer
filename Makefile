@@ -1,7 +1,7 @@
 # AI Code Reviewer - Makefile
 # Comprehensive development and deployment commands
 
-.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check security-check security-deps clean dev dev-backend dev-frontend frontend-install frontend-build frontend-lint server stop docker-build docker-run docker-stop docker-logs docker-clean health
+.PHONY: help install install-dev test test-coverage test-unit test-integration lint lint-check format type-check security-check security-deps clean dev dev-backend dev-frontend frontend-install frontend-build frontend-lint server stop docker-build docker-run docker-run-dev docker-stop docker-logs docker-logs-export docker-backup docker-restore docker-upgrade docker-clean health
 
 # Configuration
 PYTHON := python3
@@ -202,6 +202,24 @@ docker-run: ## Run application in Docker container
 	@echo "📝 Logs: make docker-logs"
 	@echo "🏥 Health: curl http://localhost:8000/health"
 
+docker-run-dev: ## Run in development mode with bind-mounted database
+	@echo "🐳 Starting Docker in development mode..."
+	@echo "📝 Database will be accessible at ./data/ai_code_reviewer_dev.db"
+	@# Check if .env file exists
+	@if [ ! -f .env ]; then \
+		echo ""; \
+		echo "⚠️  WARNING: .env file not found!"; \
+		echo ""; \
+		echo "Creating .env from example..."; \
+		cp .env.example .env; \
+		echo "✅ Created .env file. Please edit it with your configuration."; \
+		echo ""; \
+	fi
+	docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up -d
+	@echo "✅ Development container started!"
+	@echo "📝 Logs: make docker-logs"
+	@echo "💾 Database: ./data/ai_code_reviewer_dev.db (accessible from workspace)"
+
 docker-run-local: ## Run with local Ollama LLM
 	@echo "🐳 Starting with local Ollama LLM..."
 	@# Check if .env file exists
@@ -230,6 +248,32 @@ docker-logs: ## View Docker container logs
 docker-logs-ollama: ## View Ollama container logs
 	@echo "📋 Viewing Ollama logs (Ctrl+C to exit)..."
 	docker-compose -f docker/docker-compose.yml logs -f ollama
+
+docker-logs-export: ## Export Docker logs to file
+	@echo "📋 Exporting Docker logs to file..."
+	@mkdir -p logs
+	@CONTAINER_ID=$$(docker ps --filter "name=ai-code-reviewer" --format "{{.ID}}" | head -n 1); \
+	if [ -n "$$CONTAINER_ID" ]; then \
+		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+		LOGFILE="logs/docker_logs_$$TIMESTAMP.log"; \
+		docker logs $$CONTAINER_ID > $$LOGFILE 2>&1; \
+		echo "✅ Logs exported to $$LOGFILE"; \
+	else \
+		echo "❌ No running ai-code-reviewer container found"; \
+		exit 1; \
+	fi
+
+docker-backup: ## Backup database from running Docker container
+	@echo "💾 Backing up Docker database..."
+	@bash scripts/docker-backup.sh
+
+docker-restore: ## Restore database from backup to running container
+	@echo "📥 Restoring Docker database..."
+	@bash scripts/docker-restore.sh
+
+docker-upgrade: ## Safely upgrade Docker container with automatic backup
+	@echo "🚀 Starting safe Docker upgrade..."
+	@bash scripts/docker-upgrade.sh
 
 docker-clean: ## Clean Docker containers and images
 	@echo "🧹 Cleaning Docker containers and images..."

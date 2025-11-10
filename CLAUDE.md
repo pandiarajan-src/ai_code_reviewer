@@ -208,44 +208,94 @@ cd src/ai_code_reviewer/api/frontend && npm run dev
 ```
 
 ### Docker
+
+#### Quick Start
 ```bash
-# IMPORTANT: Create .env file first!
+# 1. Create .env file
 cp .env.example .env
 # Edit .env with your configuration
 
-# Build and run with Docker Compose (includes frontend + backend)
-docker-compose -f docker/docker-compose.yml up -d
-
-# For local LLM with Ollama
-docker-compose -f docker/docker-compose.yml --profile local-llm up -d
-
-# View logs
-docker-compose -f docker/docker-compose.yml logs -f ai-code-reviewer
-
-# Stop (database persists)
-docker-compose -f docker/docker-compose.yml down
-
-# Remove including volumes (CAUTION: deletes database)
-docker-compose -f docker/docker-compose.yml down -v
-
-# Using Makefile (recommended - checks for .env automatically)
+# 2. Build and run (production mode)
 make docker-build
-make docker-run      # Warns if .env is missing
-make docker-logs
+make docker-run
 
-# Access the application:
+# 3. Access the application
 # - Frontend UI: http://localhost:3000
 # - Backend API: http://localhost:8000
 # - API docs: http://localhost:8000/docs
-
-# Notes:
-# - .env file is automatically loaded by docker-compose (env_file directive)
-# - Database is stored in persistent volume 'db_data' at /app/data/ai_code_reviewer.db
-# - Frontend is served by nginx on port 3000
-# - Backend runs on uvicorn on port 8000
-# - Both processes managed by supervisor in single container
-# - make docker-run will warn if .env file is missing
 ```
+
+#### Development vs Production
+
+**Production Mode** (recommended):
+```bash
+make docker-run
+# Database: Docker named volume (docker_db_data)
+# Logging: Docker logs (stdout/stderr with auto-rotation)
+# Access logs: docker logs -f <container-id>
+```
+
+**Development Mode** (easy database access):
+```bash
+make docker-run-dev
+# Database: ./data/ai_code_reviewer_dev.db (accessible from workspace)
+# Logging: Docker logs (same as production)
+# Useful for: Debugging, inspecting DB with SQLite Browser
+```
+
+#### Database Management
+
+```bash
+# Backup database from running container
+make docker-backup
+# Saves to: ./backups/ai_code_reviewer_YYYYMMDD_HHMMSS.db
+
+# Restore database from backup (interactive)
+make docker-restore
+# Shows list of available backups to choose from
+
+# Restore specific backup (non-interactive)
+bash scripts/docker-restore.sh --file backups/ai_code_reviewer_20251110_164931.db --yes
+
+# Safe upgrade with automatic backup
+make docker-upgrade
+# Automatically: backup → rebuild → migrate → restart
+
+# Export logs to file
+make docker-logs-export
+# Saves to: ./logs/docker_logs_YYYYMMDD_HHMMSS.log
+```
+
+#### Other Commands
+
+```bash
+# View real-time logs
+make docker-logs
+
+# Run with local Ollama LLM
+make docker-run-local
+
+# Stop containers (keeps database)
+make docker-stop
+
+# Clean everything (⚠️ DELETES DATABASE)
+make docker-clean
+```
+
+#### Architecture Notes
+
+- **Single Container**: nginx (frontend) + uvicorn (backend) managed by supervisord
+- **Database**: SQLite with persistent Docker volume or bind mount (dev mode)
+- **Migrations**: Alembic runs automatically on container startup
+- **Logging**: Docker-native logging with automatic rotation (10MB max, 3 files)
+- **Cross-Platform**: Works identically on Mac/Linux/Windows (LF line endings enforced)
+
+#### Advanced
+
+See detailed guides:
+- **Quick Start**: [docker/README.md](docker/README.md)
+- **Comprehensive Guide**: [docs/DOCKER.md](docs/DOCKER.md)
+- **Database Management**: [docs/DATABASE.md](docs/DATABASE.md)
 
 ## Architecture
 
@@ -420,41 +470,8 @@ All 6 test categories passing (100% success rate):
   make docker-build
   make docker-run
   ```
-- **Solution (Windows)**: See detailed guide in [Windows Docker Setup](docs/WINDOWS_DOCKER_SETUP.md)
-  ```powershell
-  # Quick fix for Windows - run this PowerShell script
-  .\scripts\fix-env-windows.ps1 -Fix
-
-  # Or use Windows-specific docker-compose
-  docker-compose -f docker/docker-compose.windows.yml up -d
-  ```
 - **Verification**: Check container logs for your configuration values
   ```bash
   make docker-logs | grep "BITBUCKET_URL\|LLM_PROVIDER"
   ```
-- **Note**: docker-compose.yml now has `env_file: - ../.env` to automatically load environment variables
-
-**Issue: Docker fails on Windows with "Configuration errors: BITBUCKET_TOKEN is required"**
-- **Root Cause**: Windows uses CRLF line endings but Docker containers expect LF line endings
-- **Symptoms**: Container keeps restarting with configuration errors even though `.env` file exists
-- **Quick Fix**:
-  ```powershell
-  # Run the automated fix script
-  .\scripts\fix-env-windows.ps1 -Fix
-  ```
-- **Manual Fix in VS Code**:
-  1. Open `.env` file
-  2. Click "CRLF" in bottom right corner
-  3. Select "LF"
-  4. Save file
-  5. Rebuild container
-- **Manual Fix in PowerShell**:
-  ```powershell
-  # Convert CRLF to LF
-  (Get-Content .env -Raw) -replace "`r`n", "`n" | Set-Content .env -NoNewline
-  ```
-- **Prevention**: Configure Git to use LF line endings
-  ```bash
-  git config --global core.autocrlf input
-  ```
-- **Detailed Guide**: See [Windows Docker Setup Guide](docs/WINDOWS_DOCKER_SETUP.md) for comprehensive troubleshooting
+- **Note**: Line endings are automatically enforced as LF by `.gitattributes` (works on all platforms)

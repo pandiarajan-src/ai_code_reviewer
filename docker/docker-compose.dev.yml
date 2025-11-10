@@ -1,0 +1,20 @@
+# Docker Compose overrides for local development
+# Usage: docker-compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  ai-code-reviewer:
+    # Development-specific volume mounts
+    volumes:
+      - ../data:/app/data  # Bind mount for easy database access (visible in workspace)
+
+    # Development database configuration
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/ai_code_reviewer_dev.db
+      - DATABASE_ECHO=true  # Enable SQL query logging for debugging
+      - LOG_LEVEL=DEBUG     # More verbose logging
+      - EMAIL_OPTOUT=true   # Disable emails in development
+
+    # Development-friendly restart policy
+    restart: "no"  # Don't auto-restart in dev (easier to see errors)
