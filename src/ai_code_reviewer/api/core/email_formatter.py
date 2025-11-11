@@ -1,36 +1,174 @@
 """Email formatting utilities for converting review text to HTML."""
 
-import re
+import logging
+
+import markdown
+
+
+logger = logging.getLogger(__name__)
 
 
 def format_review_to_html(review_text: str) -> str:
-    """Convert review text from markdown to HTML format for email"""
-    # Convert markdown headers to HTML
-    html_text = re.sub(r"^### (.*?)$", r"<h3>\1</h3>", review_text, flags=re.MULTILINE)
-    html_text = re.sub(r"^#### (.*?)$", r"<h4>\1</h4>", html_text, flags=re.MULTILINE)
+    """
+    Convert review text from markdown to HTML format for email.
 
-    # Convert bold text
-    html_text = re.sub(r"\*\*(.*?)\*\*", r"<strong>\1</strong>", html_text)
+    Uses the markdown library to properly convert markdown to HTML,
+    including support for:
+    - Headers (h1, h2, h3, etc.)
+    - Bold, italic, strikethrough
+    - Code blocks (fenced with ```)
+    - Inline code
+    - Lists (ordered and unordered)
+    - Tables
+    - Links
 
-    # Convert code blocks
-    html_text = re.sub(r"```(\w*)\n(.*?)```", r'<pre><code class="\1">\2</code></pre>', html_text, flags=re.DOTALL)
+    Args:
+        review_text: The markdown-formatted review text
 
-    # Convert inline code
-    html_text = re.sub(r"`([^`]+)`", r"<code>\1</code>", html_text)
+    Returns:
+        HTML-formatted string ready for email body
+    """
+    try:
+        # Convert markdown to HTML using the markdown library
+        # Extensions:
+        # - fenced_code: Support for ``` code blocks
+        # - tables: Support for markdown tables
+        # - nl2br: Convert newlines to <br> tags
+        # - sane_lists: Better list handling
+        html_content = markdown.markdown(
+            review_text,
+            extensions=[
+                "fenced_code",
+                "tables",
+                "nl2br",
+                "sane_lists",
+            ],
+        )
 
-    # Convert bullet points
-    html_text = re.sub(r"^   - (.*?)$", r"   <li>\1</li>", html_text, flags=re.MULTILINE)
+        # Wrap in a styled HTML structure for better email rendering
+        html_email = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }}
+        .content {{
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }}
+        h2 {{
+            color: #34495e;
+            margin-top: 25px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }}
+        h3 {{
+            color: #555;
+            margin-top: 20px;
+        }}
+        code {{
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }}
+        pre {{
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #3498db;
+        }}
+        pre code {{
+            background-color: transparent;
+            color: #abb2bf;
+            padding: 0;
+        }}
+        ul, ol {{
+            padding-left: 25px;
+        }}
+        li {{
+            margin-bottom: 8px;
+        }}
+        strong {{
+            color: #2c3e50;
+            font-weight: 600;
+        }}
+        table {{
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+        }}
+        th, td {{
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }}
+        th {{
+            background-color: #3498db;
+            color: white;
+            font-weight: 600;
+        }}
+        tr:nth-child(even) {{
+            background-color: #f9f9f9;
+        }}
+        blockquote {{
+            border-left: 4px solid #3498db;
+            margin: 15px 0;
+            padding-left: 15px;
+            color: #666;
+            font-style: italic;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+            font-size: 0.9em;
+            color: #7f8c8d;
+            text-align: center;
+        }}
+    </style>
+</head>
+<body>
+    <div class="content">
+        {html_content}
+        <div class="footer">
+            <p>🤖 This review was generated by AI Code Reviewer</p>
+        </div>
+    </div>
+</body>
+</html>"""
 
-    # Convert newlines to <br> for better formatting
-    html_text = html_text.replace("\n", "<br>\n")
+        return html_email
 
-    # Wrap in basic HTML structure
-    return f"""
+    except Exception as e:
+        logger.error(f"Error converting markdown to HTML: {e}")
+        # Fallback: return the original text wrapped in basic HTML
+        return f"""<!DOCTYPE html>
 <html>
 <body>
-<div style="font-family: Arial, sans-serif; max-width: 800px;">
-{html_text}
-</div>
+    <div style="font-family: Arial, sans-serif; max-width: 800px; padding: 20px;">
+        <pre style="white-space: pre-wrap; word-wrap: break-word;">{review_text}</pre>
+    </div>
 </body>
-</html>
-"""
+</html>"""
