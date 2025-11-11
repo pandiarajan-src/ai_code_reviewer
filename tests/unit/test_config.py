@@ -94,8 +94,12 @@ class TestConfig:
     def test_review_prompt_template(self):
         """Test review prompt template formatting"""
         diff_content = "test diff content"
-        formatted_prompt = Config.REVIEW_PROMPT_TEMPLATE.format(diff_content=diff_content)
+        guidelines_section = "test guidelines"
+        formatted_prompt = Config.REVIEW_PROMPT_TEMPLATE.format(
+            diff_content=diff_content, guidelines_section=guidelines_section
+        )
 
         assert "test diff content" in formatted_prompt
-        assert "expert code reviewer" in formatted_prompt.lower()
-        assert "bug detection" in formatted_prompt.lower()
+        assert "test guidelines" in formatted_prompt
+        assert "expert" in formatted_prompt.lower()
+        assert "code reviewer" in formatted_prompt.lower()

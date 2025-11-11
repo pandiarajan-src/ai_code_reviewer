@@ -4,6 +4,7 @@ from typing import Any
 import httpx
 
 from ai_code_reviewer.api.core.config import Config
+from ai_code_reviewer.api.core.guidelines_loader import GuidelinesLoader
 
 
 logger = logging.getLogger(__name__)
@@ -82,16 +83,56 @@ class LLMClient:
     async def get_code_review(self, diff_content: str) -> str | None:
         """Get AI code review for the provided diff"""
         try:
-            # Prepare the prompt
-            prompt = Config.REVIEW_PROMPT_TEMPLATE.format(diff_content=diff_content)
+            # Load coding guidelines if enabled
+            guidelines_section = ""
+            if Config.GUIDELINES_ENABLED:
+                try:
+                    guidelines_content = GuidelinesLoader.load_guidelines(Config.GUIDELINES_FILE)
+                    # Detect programming language from diff to extract relevant guidelines
+                    detected_language = self._detect_language_from_diff(diff_content)
+
+                    if detected_language:
+                        logger.info(f"Detected language: {detected_language}, extracting relevant guidelines")
+                        guidelines_section = f"""### 📋 **Coding Guidelines**
+
+The following coding guidelines MUST be followed. Pay special attention to "Rules (Must Comply)" sections:
+
+{GuidelinesLoader.extract_language_guidelines(guidelines_content, detected_language)}"""
+                    else:
+                        logger.info("No specific language detected, including general principles only")
+                        guidelines_section = f"""### 📋 **Coding Guidelines**
+
+The following general coding principles MUST be followed:
+
+{GuidelinesLoader.extract_language_guidelines(guidelines_content, None)}"""
+
+                    logger.info(f"Guidelines section prepared ({len(guidelines_section)} chars)")
+                except Exception as e:
+                    logger.error(f"Error loading guidelines: {e}, proceeding without guidelines")
+                    guidelines_section = ""
+            else:
+                logger.info("Coding guidelines are disabled (GUIDELINES_ENABLED=false)")
+
+            # Prepare the prompt with guidelines
+            prompt = Config.REVIEW_PROMPT_TEMPLATE.format(
+                diff_content=diff_content, guidelines_section=guidelines_section
+            )
 
             # Truncate if too long (to avoid token limits)
-            max_chars = 50000  # Adjust based on your model's context window
+            max_chars = 80000  # Increased limit to accommodate guidelines (adjust based on your model's context window)
             if len(prompt) > max_chars:
-                logger.warning(f"Diff too long ({len(prompt)} chars), truncating to {max_chars}")
-                truncated_diff = diff_content[: max_chars - len(Config.REVIEW_PROMPT_TEMPLATE) + len("{diff_content}")]
+                logger.warning(f"Prompt too long ({len(prompt)} chars), truncating to {max_chars}")
+                # Calculate how much space we have for diff after guidelines
+                available_chars = max_chars - len(guidelines_section) - 2000  # Reserve 2000 chars for template
+                if available_chars < 5000:
+                    # If guidelines are too large, truncate them too
+                    logger.warning("Guidelines too large, truncating guidelines section")
+                    guidelines_section = guidelines_section[:15000] + "\n\n[... guidelines truncated ...]"
+                    available_chars = max_chars - len(guidelines_section) - 2000
+
+                truncated_diff = diff_content[:available_chars] + "\n\n[... diff truncated ...]"
                 prompt = Config.REVIEW_PROMPT_TEMPLATE.format(
-                    diff_content=truncated_diff + "\n\n[... diff truncated ...]"
+                    diff_content=truncated_diff, guidelines_section=guidelines_section
                 )
 
             if self.provider == "openai":
@@ -211,3 +252,68 @@ Provide a concise summary review:"""
         except Exception as e:
             logger.error(f"Error getting summary review: {str(e)}")
             return None
+
+    def _detect_language_from_diff(self, diff_content: str) -> str | None:
+        """
+        Detect the primary programming language from the diff content.
+
+        Analyzes file extensions in the diff to determine the dominant language.
+
+        Args:
+            diff_content: The git diff content
+
+        Returns:
+            The detected language name (e.g., "Python", "C#", "JavaScript/TypeScript")
+            or None if no clear language is detected
+        """
+        import re
+        from collections import Counter
+
+        # Extract file paths from diff headers (diff --git a/path b/path or +++ b/path)
+        file_pattern = r"(?:diff --git a/.*? b/|^\+\+\+ b/)(.+?)(?:\s|$)"
+        files = re.findall(file_pattern, diff_content, re.MULTILINE)
+
+        if not files:
+            logger.debug("No files found in diff")
+            return None
+
+        # Map file extensions to language names
+        extension_map = {
+            ".py": "Python",
+            ".cs": "C#",
+            ".csproj": "C#",
+            ".cpp": "C++",
+            ".cc": "C++",
+            ".cxx": "C++",
+            ".h": "C++",
+            ".hpp": "C++",
+            ".swift": "Swift",
+            ".m": "Objective-C",
+            ".mm": "Objective-C",
+            ".js": "JavaScript/TypeScript",
+            ".jsx": "JavaScript/TypeScript",
+            ".ts": "JavaScript/TypeScript",
+            ".tsx": "JavaScript/TypeScript",
+            ".xaml": "XAML/WPF",
+        }
+
+        # Count occurrences of each language
+        language_counter: Counter[str] = Counter()
+        for file_path in files:
+            # Get file extension
+            if "." in file_path:
+                ext = "." + file_path.rsplit(".", 1)[1].lower()
+                if ext in extension_map:
+                    language_counter[extension_map[ext]] += 1
+
+        if not language_counter:
+            logger.debug("No recognized file extensions found in diff")
+            return None
+
+        # Return the most common language
+        most_common = language_counter.most_common(1)[0]
+        detected_language = most_common[0]
+        count = most_common[1]
+
+        logger.info(f"Detected primary language: {detected_language} ({count} files)")
+        return detected_language

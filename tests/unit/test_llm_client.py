@@ -185,17 +185,24 @@ class TestLLMClient:
     async def test_get_code_review_truncation(self, client):
         """Test code review with long diff truncation"""
         # Create a very long diff
-        long_diff = "a" * 60000
+        long_diff = "a" * 100000  # Longer than max_chars (80000)
         client.provider = "openai"
 
-        with patch.object(
-            client, "_get_openai_review", new_callable=AsyncMock, return_value="Mock review"
-        ) as mock_review:
+        # Disable guidelines for this test to make it predictable
+        with (
+            patch("ai_code_reviewer.api.core.config.Config.GUIDELINES_ENABLED", False),
+            patch.object(
+                client, "_get_openai_review", new_callable=AsyncMock, return_value="Mock review"
+            ) as mock_review,
+        ):
             await client.get_code_review(long_diff)
 
-            # Check that the prompt was truncated
+            # Check that the prompt was truncated (should be close to max_chars 80000)
             call_args = mock_review.call_args[0][0]
-            assert len(call_args) < 60000
+            # Allow some overhead for the template itself (should be < 85000)
+            assert len(call_args) < 85000, f"Prompt too long: {len(call_args)} chars"
+            # Verify truncation happened (original diff was 100000 chars)
+            assert len(call_args) < len(long_diff), "Diff was not truncated"
             assert "[... diff truncated ...]" in call_args
 
     @pytest.mark.asyncio

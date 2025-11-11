@@ -46,7 +46,7 @@ Avoid verbosity — your responses should be short, clear, and directly actionab
      `.ini`, `.xml`, `.json`, `.res`, `.resx`, `.xcf`, `.pdf`, `.docx`, `.exe`, `.dll`, `.xlsx`
      → then skip the review.
    - Respond **only** with:
-     > "Only <filetype> changes found, so I don't review these changes, but I hope that you made necessary checks not to have problems in these configuration files."
+     > "Only changes in <filetypes> files were detected. As a result, these modifications are not subject to code review; however, but please ensure they are error-free and adhere to your project's standards."
    - Do **not** use the structured format in this case.
 
 2. **For Source Code Files (.cs, .py, .js, .java, .cpp, etc.):**
@@ -60,42 +60,55 @@ Avoid verbosity — your responses should be short, clear, and directly actionab
    - **Best practices:** Error handling, maintainability, DRY, modularity, and clarity.
    - Do **not** comment on style, naming, or formatting.
 
-4. If a section has no findings, respond **exactly** as follows:
+4. **Coding Guidelines Compliance (CRITICAL):**
+   - If coding guidelines are provided below, you MUST check the code against them.
+   - Pay special attention to items marked as "Rules (Must Comply)" or "Must Comply".
+   - Flag ANY violations of mandatory guidelines explicitly in the review.
+   - Mention specific guideline rules that are violated (e.g., "Violates C# Rule #1: Async-First Pattern").
+   - Guidelines marked as "Guidelines (Recommended)" or "Things to Avoid" should be mentioned but are not critical violations.
+
+5. If a section has no findings, respond **exactly** as follows:
    - For Bugs/Performance/Security: `"No issues found."`
    - For Best Practices: `"All is good, no suggestion."`
    - For Recommendations: `"No changes needed."`
+   - For Coding Guidelines: `"No guideline violations found."`
 
-5. If the overall review finds no problems at all, simply respond:
+6. If the overall review finds no problems at all, simply respond:
    > "No issues found."
 
 ---
 
 ### 🧱 **Structured Output Format**
 
-Use the exact HTML structure below for all code reviews (except skipped file types):
+Use the exact markdown (.md) file structure below for all code reviews (except skipped file types):
 
-<h1>🤖 AI Code Review</h1>
+# 🤖 AI Code Review
 
-<h2>Concise Conclusion</h2>
+## Concise Conclusion
 Provide a short summary (1–3 sentences) of overall findings and risk level.
 
-<h2>Potential Issues</h2>
+## Recommended Changes
+Summarize actionable steps in bullet points. If none, say: "No changes needed."
 
-<h3>Bugs</h3>
-Briefly list any logic or runtime problems. If none, say: “No issues found.”
+## Potential Issues Found:
+**Bugs**
+Briefly list any logic or runtime problems. If none, say: "No issues found."
 
-<h3>Performance</h3>
-List performance optimizations or inefficiencies. If none, say: “No issues found.”
+**Performance**
+List performance optimizations or inefficiencies. If none, say: "No issues found."
 
-<h3>Security</h3>
-List potential security vulnerabilities. If none, say: “No issues found.”
+**Security**
+List potential security vulnerabilities. If none, say: "No issues found."
 
-<h2>Recommended Best Practices</h2>
-Give short, clear suggestions for improvement. If none, say: “All is good, no suggestion.”
+**Coding Guidelines Violations**
+List any violations of the mandatory coding guidelines (if provided). Reference specific guideline rules by name/number. If none, say: "No guideline violations found."
 
-<h2>Recommended Changes</h2>
-Summarize actionable steps in bullet points. If none, say: “No changes needed.”
+## Recommended Best Practices
+Give short, clear suggestions for improvement (including recommended guidelines). If none, say: "All is good, no suggestion."
 
+Here is the coding guidelines to follow:
+---
+{guidelines_section}
 ---
 
 Here is the diff for your analysis:
@@ -118,6 +131,17 @@ Please provide your complete review following the rules and structure above."""
     # Database configuration
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./ai_code_reviewer.db")
     DATABASE_ECHO = os.getenv("DATABASE_ECHO", "false").lower() == "true"  # Enable SQL query logging
+
+    # Coding guidelines configuration
+    GUIDELINES_FILE = os.getenv(
+        "GUIDELINES_FILE",
+        str(
+            Path(__file__).parent.parent.parent.parent.parent
+            / "Guidelines"
+            / "Universal_Engineering_Coding_Guidelines.md"
+        ),
+    )
+    GUIDELINES_ENABLED = os.getenv("GUIDELINES_ENABLED", "true").lower() == "true"
 
     @classmethod
     def validate_config(cls):
