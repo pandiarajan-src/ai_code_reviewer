@@ -83,7 +83,7 @@ Use the exact markdown (.md) file structure below for all code reviews (except s
 
 # 🤖 AI Code Review
 
-## Concise Conclusion
+## Review Summary (Overall Findings)
 Provide a short summary (1–3 sentences) of overall findings and risk level.
 
 ## Recommended Changes
