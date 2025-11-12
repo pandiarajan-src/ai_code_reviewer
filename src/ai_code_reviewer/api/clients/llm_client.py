@@ -83,6 +83,9 @@ class LLMClient:
     async def get_code_review(self, diff_content: str) -> str | None:
         """Get AI code review for the provided diff"""
         try:
+            # Extract file extensions from diff to check for non-source files
+            file_extensions = self._extract_file_extensions_from_diff(diff_content)
+
             # Load coding guidelines if enabled
             guidelines_section = ""
             if Config.GUIDELINES_ENABLED:
@@ -118,6 +121,13 @@ The following general coding principles MUST be followed:
                 diff_content=diff_content, guidelines_section=guidelines_section
             )
 
+            # Replace <filetypes> placeholder with actual file extensions
+            # This ensures the LLM response shows actual file types instead of the placeholder
+            if file_extensions and "<filetypes>" in prompt:
+                filetypes_str = ", ".join(sorted(file_extensions))
+                prompt = prompt.replace("<filetypes>", filetypes_str)
+                logger.info(f"Replaced <filetypes> placeholder with: {filetypes_str}")
+
             # Truncate if too long (to avoid token limits)
             max_chars = 80000  # Increased limit to accommodate guidelines (adjust based on your model's context window)
             if len(prompt) > max_chars:
@@ -134,6 +144,11 @@ The following general coding principles MUST be followed:
                 prompt = Config.REVIEW_PROMPT_TEMPLATE.format(
                     diff_content=truncated_diff, guidelines_section=guidelines_section
                 )
+
+                # Replace <filetypes> placeholder again after re-formatting
+                if file_extensions and "<filetypes>" in prompt:
+                    filetypes_str = ", ".join(sorted(file_extensions))
+                    prompt = prompt.replace("<filetypes>", filetypes_str)
 
             if self.provider == "openai":
                 return await self._get_openai_review(prompt)
@@ -252,6 +267,35 @@ Provide a concise summary review:"""
         except Exception as e:
             logger.error(f"Error getting summary review: {str(e)}")
             return None
+
+    def _extract_file_extensions_from_diff(self, diff_content: str) -> set[str]:
+        """
+        Extract all unique file extensions from the diff content.
+
+        Args:
+            diff_content: The git diff content
+
+        Returns:
+            A set of unique file extensions (e.g., {".py", ".cs", ".xml"})
+        """
+        import re
+
+        # Extract file paths from diff headers (diff --git a/path b/path or +++ b/path)
+        file_pattern = r"(?:diff --git a/.*? b/|^\+\+\+ b/)(.+?)(?:\s|$)"
+        files = re.findall(file_pattern, diff_content, re.MULTILINE)
+
+        if not files:
+            logger.debug("No files found in diff")
+            return set()
+
+        # Extract unique file extensions
+        extensions = set()
+        for file_path in files:
+            if "." in file_path:
+                ext = "." + file_path.rsplit(".", 1)[1].lower()
+                extensions.add(ext)
+
+        return extensions
 
     def _detect_language_from_diff(self, diff_content: str) -> str | None:
         """
