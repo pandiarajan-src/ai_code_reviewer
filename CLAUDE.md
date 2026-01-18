@@ -386,6 +386,28 @@ Required environment variables are defined in config.py with validation. Key var
 - Environment configuration: python-dotenv for .env file loading
 - Frontend: TypeScript 5.9+, ESLint 8.x with @typescript-eslint v8.x, React 18+
 
+## Security Considerations
+
+**Current Security Posture**: Several security features are intentionally disabled for development convenience but **MUST** be enabled before production deployment:
+
+- **Webhook signature verification**: Commented out in `webhook.py:53-56`
+- **SSL certificate verification**: Disabled for Bitbucket in `bitbucket_client.py:31,53`
+- **CORS policy**: Allows all origins in `app.py:68-74` (permissive)
+- **Rate limiting**: Not implemented on any endpoints
+- **API authentication**: No authentication required
+
+**When making changes:**
+- Do not introduce additional security vulnerabilities
+- Document any new security trade-offs in code comments
+- Follow OWASP Top 10 best practices
+- Validate all user inputs at system boundaries (API endpoints, webhook handlers)
+- Use parameterized queries exclusively (never raw SQL)
+- Sanitize HTML output in frontend (use `rehype-sanitize` for ReactMarkdown)
+- Avoid storing sensitive data in logs (redact tokens, passwords, PII)
+- Test security fixes thoroughly before committing
+
+**See**: README.md Security Warning section and security audit documentation for detailed remediation steps.
+
 ## Recent Fixes and Improvements
 
 ### Module Structure Refactoring (2025-01)
@@ -450,7 +472,7 @@ All 6 test categories passing (100% success rate):
 - **Solution**: Use `npm ci` instead of `npm ci --only=production` to include optional dependencies needed for platform-specific builds.
 
 **Issue: Frontend lint shows TypeScript version warning**
-- **Solution**: Upgrade `@typescript-eslint` packages to v8.x which supports TypeScript 5.6+. This is now included in package.json.
+- **Solution**: Upgrade `@typescript-eslint` packages to v8.x which supports TypeScript 5.9+. This is now included in package.json.
 
 **Issue: ESLint can't find configuration file**
 - **Solution**: Ensure `.eslintrc.cjs` exists in the frontend directory. The file is now included in the repository.
@@ -475,3 +497,13 @@ All 6 test categories passing (100% success rate):
   make docker-logs | grep "BITBUCKET_URL\|LLM_PROVIDER"
   ```
 - **Note**: Line endings are automatically enforced as LF by `.gitattributes` (works on all platforms)
+
+**Issue: Webhook received but review not triggered**
+- **Root Cause**: Webhook payload format may not match expected structure
+- **Solution**: Check webhook event type and payload structure
+  - PR events: `pr:opened`, `pr:from_ref_updated`
+  - Commit events: `repo:refs_changed`
+  - Payload structures differ significantly between event types
+  - See [Webhook Payload Documentation](../docs/webhook-payloads.md) for detailed payload formats and field mappings
+- **Debug**: Check application logs for `"Unsupported event key"` or `"Missing required fields"` errors
+- **Verification**: Test webhook delivery in Bitbucket settings and verify payload matches expected format

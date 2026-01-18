@@ -59,7 +59,7 @@ See [architecture.md](architecture.md) for detailed information about the codeba
 make dev
 
 # Or directly
-python -m ai_code_reviewer.main
+python -m ai_code_reviewer.api.main
 ```
 
 The server will start at `http://localhost:8000` with auto-reload disabled by default.
@@ -244,7 +244,7 @@ EMAIL_OPTOUT=true  # Disable emails during development
 
 1. **Enable debug logging**:
    ```bash
-   LOG_LEVEL=DEBUG python -m ai_code_reviewer.main
+   LOG_LEVEL=DEBUG python -m ai_code_reviewer.api.main
    ```
 
 2. **Use Python debugger**:
@@ -353,8 +353,10 @@ Ensure you're running from the project root with the new module path.
 
 ## Contributing
 
-See [Contributing Guidelines](../CONTRIBUTING.md) for information about:
-- Code review process
-- Commit message conventions
+When contributing to this project:
+- Follow the code standards documented in [CLAUDE.md](../CLAUDE.md)
+- Write tests for new features and bug fixes
+- Run `make lint` and `make test` before committing
+- Use clear, descriptive commit messages
 - Pull request templates
 - Issue reporting

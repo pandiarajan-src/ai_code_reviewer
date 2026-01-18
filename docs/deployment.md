@@ -97,7 +97,7 @@ pytest tests/integration/test_main.py -v
 
 ```bash
 # Start the server using module syntax (recommended)
-python -m ai_code_reviewer.main
+python -m ai_code_reviewer.api.main
 
 # Or using Makefile
 make dev
@@ -302,7 +302,7 @@ User=ai-reviewer
 WorkingDirectory=/opt/ai-code-reviewer
 Environment=PATH=/opt/ai-code-reviewer/venv/bin
 EnvironmentFile=/opt/ai-code-reviewer/.env
-ExecStart=/opt/ai-code-reviewer/venv/bin/python -m ai_code_reviewer.main
+ExecStart=/opt/ai-code-reviewer/venv/bin/python -m ai_code_reviewer.api.main
 Restart=always
 RestartSec=10
 
@@ -539,6 +539,8 @@ For each repository where you want AI code reviews:
      - Pull request → Source updated
      - Repository → Push (optional, for commit reviews)
 4. **Save** and **Enable** the webhook
+
+**Note**: Different event types send different payload structures. Pull request events (`pr:opened`, `pr:from_ref_updated`) and commit events (`repo:refs_changed`) have significantly different payload formats. See [Webhook Payload Documentation](webhook-payloads.md) for detailed payload structures, field mappings, and troubleshooting guidance.
 
 ### 4. Test Webhook
 
@@ -867,7 +869,7 @@ docker stats ai-code-reviewer
 export LOG_LEVEL=DEBUG
 
 # Run with debug output
-python main.py
+python -m ai_code_reviewer.api.main
 
 # Or with Docker
 docker-compose up ai-code-reviewer
