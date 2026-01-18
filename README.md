@@ -10,18 +10,133 @@ This agent integrates seamlessly with your Bitbucket Enterprise Server to provid
 
 - **Automated Code Review**: Automatically reviews pull requests and commits when triggered by Bitbucket webhooks
 - **Email Notifications**: Sends HTML-formatted review results directly to commit/PR authors via Azure Logic Apps
-- **Review History Database**: Stores all review records with metadata for tracking and auditing
+- **Review History & Persistence**: All code reviews automatically saved to SQLite database with complete metadata
+  - Store diff content, LLM feedback, author info, timestamps, email status
+  - Query reviews by project, repository, author, commit, or pull request
+  - Track review success/failure with detailed error information
+  - RESTful API endpoints for retrieving review history
+  - Paginated results for efficient data access
+  - Database migrations managed via Alembic
 - **Multi-LLM Support**: Works with OpenAI GPT models, local Ollama instances, and other LLM providers
 - **Comprehensive Analysis**: Focuses on bug detection, security vulnerabilities, performance issues, and best practices
 - **Intelligent Routing**: Automatically extracts author email from commits/PRs for targeted notifications
 - **Flexible Deployment**: Can run independently or alongside existing CI/CD infrastructure
 - **Docker Ready**: Fully containerized with frontend + backend for easy deployment and scaling
-- **Web UI**: React-based frontend for diff uploads, manual reviews, and viewing review history
+- **Web UI Interface**: React-based frontend for managing code reviews with Material-UI design
+  - **Tab 1 - Diff Upload**: Upload .diff/.patch files for instant AI review with markdown preview
+  - **Tab 2 - Manual Review**: Trigger reviews for specific PRs or commits from Bitbucket
+  - **Tab 3 - Reviews**: Browse successful reviews with pagination, search, and filtering
+  - **Tab 4 - Failures**: View failed reviews with detailed error diagnostics and stack traces
+  - **Tab 5 - System Info**: Health checks, configuration status, and system diagnostics
+  - Real-time markdown preview of code reviews with syntax highlighting
+  - Intel blue professional theme with responsive design
 - **Webhook Security**: Supports webhook signature verification for secure communication
 - **Manual Triggers**: Provides API endpoints and web interface for manual code review requests
 - **Review Retrieval APIs**: Query review history by project, author, commit, or PR
 - **Health Monitoring**: Built-in health checks and monitoring endpoints
 - **Type-Safe**: Full TypeScript frontend and Python type hints with MyPy validation
+
+## ⚠️ Security Warning
+
+**IMPORTANT:** Several security features are currently **disabled by default** and must be enabled before production deployment:
+
+- **Webhook Authentication**: Signature verification is commented out in `src/ai_code_reviewer/api/routes/webhook.py:53-56`
+  - **Risk**: Anyone can trigger code reviews without authorization, leading to DoS attacks and excessive LLM API costs
+  - **Fix**: Enable `verify_webhook_signature()` and configure `WEBHOOK_SECRET` environment variable
+
+- **CORS Policy**: Currently allows requests from any origin (`src/ai_code_reviewer/api/app.py:68-74`)
+  - **Risk**: Cross-site request forgery (CSRF) attacks and unauthorized access
+  - **Fix**: Restrict `allow_origins` to specific domains in your environment
+
+- **SSL Verification**: Disabled for Bitbucket API calls (`src/ai_code_reviewer/api/clients/bitbucket_client.py:31,53`)
+  - **Risk**: Man-in-the-middle (MITM) attacks possible
+  - **Fix**: Make SSL verification configurable via environment variable; use custom CA certificates for self-signed certs
+
+- **Rate Limiting**: No rate limiting on any endpoints
+  - **Risk**: DoS attacks, resource exhaustion, excessive LLM API costs
+  - **Fix**: Implement rate limiting middleware (e.g., slowapi)
+
+- **API Authentication**: No authentication required for API endpoints
+  - **Risk**: Unauthorized access to review data and manual review triggers
+  - **Fix**: Implement JWT or API key authentication
+
+**Recommendation**: These security features are disabled for development convenience. Review and enable them before deploying to production. Address these issues in Phase 1 of the security remediation plan before production deployment.
+
+## Review History & Database
+
+All code reviews are automatically persisted to a SQLite database (configurable to PostgreSQL/MySQL via `DATABASE_URL`). Each review record includes:
+
+- **Review Content**: Full diff, LLM analysis, review feedback in markdown format
+- **Metadata**: Project key, repository slug, commit SHA, pull request ID
+- **Author Information**: Committer name, email address, review recipients
+- **Status Tracking**: Success/failure status, email delivery confirmation
+- **Timestamps**: Creation date, last updated time, processing duration
+- **Error Details**: Stack traces and error messages for failed reviews
+
+### Querying Review History
+
+Access review history via the web UI or REST API endpoints:
+
+```bash
+# Get latest reviews (default: 10)
+curl http://localhost:8000/api/reviews/latest?limit=10
+
+# Get reviews for a specific project
+curl http://localhost:8000/api/reviews/project/MYPROJECT
+
+# Get reviews for a specific repository
+curl http://localhost:8000/api/reviews/project/MYPROJECT/repo/my-repo
+
+# Get reviews by author email
+curl http://localhost:8000/api/reviews/author/john.doe@company.com
+
+# Get reviews by commit SHA
+curl http://localhost:8000/api/reviews/commit/abc123def456
+
+# Get reviews by pull request ID
+curl http://localhost:8000/api/reviews/pr/MYPROJECT/my-repo/42
+
+# Get paginated reviews
+curl http://localhost:8000/api/reviews?page=1&page_size=25
+
+# Get review statistics
+curl http://localhost:8000/api/reviews/stats
+```
+
+### Database Management
+
+Use the `db_helper.py` script for common database operations:
+
+```bash
+# Create/initialize database
+python scripts/db_helper.py create
+
+# View database statistics
+python scripts/db_helper.py stats
+
+# List recent reviews
+python scripts/db_helper.py list --limit 20
+
+# Clean all review records (⚠️ destructive)
+python scripts/db_helper.py clean
+
+# Backup database (SQLite only)
+python scripts/db_helper.py backup
+
+# Restore from backup
+python scripts/db_helper.py restore --file backup_20250118.db
+
+# Seed test data for development
+python scripts/db_helper.py seed
+
+# Reset database (drop and recreate all tables)
+python scripts/db_helper.py reset
+
+# See all available commands
+python scripts/db_helper.py --help
+```
+
+For Docker deployments, database persistence is automatic via Docker volumes. See the [Database Management Guide](docs/DATABASE.md) for comprehensive documentation on migrations, backups, and production deployment strategies.
 
 ### Project Structure
 
@@ -147,7 +262,7 @@ Copy-Item .env.example .env
 .\scripts\fix-env-windows.ps1 -Fix
 ```
 
-> **Windows Users:** If you encounter Docker configuration errors, see the [Windows Setup Guide](WINDOWS_README.md) for troubleshooting.
+> **Windows Users:** Line endings are critical for Docker on Windows. The script above handles this automatically. If you encounter issues, ensure Git is configured with `core.autocrlf=input`.
 
 ### 2. Configure Environment Variables
 
@@ -211,7 +326,45 @@ docker-compose -f docker/docker-compose.yml --profile local-llm up -d
 
 **Note**: The docker-compose.yml now includes `env_file: - ../.env` which automatically loads environment variables from your `.env` file.
 
-### 4. Configure Bitbucket Webhooks
+### 4. Frontend Development (Optional)
+
+The web UI provides a user-friendly interface for managing code reviews. To run the frontend in development mode:
+
+```bash
+# Navigate to frontend directory
+cd src/ai_code_reviewer/api/frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server with hot reload
+npm run dev
+
+# Frontend will be available at: http://localhost:3000
+# API requests to /api/* are automatically proxied to backend at http://localhost:8000
+```
+
+**Features accessible via Web UI:**
+- **Diff Upload** (Tab 1): Upload .diff/.patch files for instant AI code review
+- **Manual Review** (Tab 2): Trigger reviews for specific PRs or commits
+- **Reviews** (Tab 3): Browse successful reviews with pagination and search
+- **Failures** (Tab 4): View failed reviews with error diagnostics
+- **System Info** (Tab 5): Check system health and configuration status
+
+**Production Build:**
+```bash
+cd src/ai_code_reviewer/api/frontend
+
+# Create optimized production bundle
+npm run build
+
+# Preview production build locally
+npm run preview
+```
+
+For more details, see [Frontend README](src/ai_code_reviewer/api/frontend/README.md).
+
+### 5. Configure Bitbucket Webhooks
 
 1. Navigate to your repository settings in Bitbucket
 2. Go to **Webhooks** and create a new webhook
@@ -235,14 +388,16 @@ docker-compose -f docker/docker-compose.yml --profile local-llm up -d
 | `OLLAMA_HOST` | Ollama server URL (if using local LLM) | No | `http://localhost:11434` |
 | `WEBHOOK_SECRET` | Secret for webhook verification | No | - |
 | `LOGIC_APP_EMAIL_URL` | Azure Logic App HTTP trigger URL | Yes | - |
-| `LOGIC_APP_FROM_EMAIL` | From email address for notifications | No | `pandiarajans@test.com` |
-| `EMAIL_OPTOUT` | Disable email sending for testing | No | `true` |
+| `LOGIC_APP_FROM_EMAIL` | From email address for notifications | No | `pandiarajans@test.com` ⚠️ |
+| `EMAIL_OPTOUT` | Disable email sending for testing | No | `"true"` |
 | `HOST` | Server bind address | No | `0.0.0.0` |
 | `BACKEND_PORT` | Backend API server port | No | `8000` |
 | `FRONTEND_PORT` | Frontend UI server port | No | `3000` |
 | `LOG_LEVEL` | Logging level | No | `INFO` |
 | `DATABASE_URL` | Database connection URL | No | `sqlite+aiosqlite:///./ai_code_reviewer.db` |
 | `DATABASE_ECHO` | Enable SQL query logging | No | `false` |
+
+⚠️ *Placeholder value - update for your environment before production deployment*
 
 ### Bitbucket Token Setup
 
